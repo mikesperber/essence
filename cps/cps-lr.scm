@@ -5,54 +5,55 @@
   (c-cons c-car c-cdr)
   (c-nil))
 
-(define (parse grammar k first-map state continuations input)
-  (if (final? state grammar)
-      (if (equal? '$ (car input))
-	  'accept
-	  'error)
-      (let* ((closure (compute-closure state grammar k first-map))
-	     (the-next-nonterminals (next-nonterminals closure grammar)))
+(define-without-memoization
+  (parse grammar k first-map state continuations input)
+  (_memo
+   (if (final? state grammar)
+       (if (equal? '$ (car input))
+	   'accept
+	   'error)
+       (let* ((closure (compute-closure state grammar k first-map))
+	      (the-next-nonterminals (next-nonterminals closure grammar)))
 
-	(define (shift-nonterminal nonterminal input)
-	  (the-trick-cannot-fail
-	   nonterminal the-next-nonterminals
-	   (lambda (symbol)
-	     (let ((next-state (goto closure symbol)))
-	       (parse grammar k first-map
-		      next-state
-		      (c-cons (and (not (null? the-next-nonterminals))
-				   shift-nonterminal)
-			      (c-take (- (active next-state) 1)
-				      continuations))
-		      input)))))
+	 (define (shift-nonterminal nonterminal input)
+	   (the-trick-cannot-fail
+	    nonterminal the-next-nonterminals
+	    (lambda (symbol)
+	      (let ((next-state (goto closure symbol)))
+		(parse grammar k first-map
+		       next-state
+		       (c-cons (and (not (null? the-next-nonterminals))
+				    shift-nonterminal)
+			       (c-take (- (active next-state) 1)
+				       continuations))
+		       input)))))
 
-	(define (shift-terminal terminal input fail)
-	  (the-trick
-	   terminal (next-terminals closure grammar)
-	   (lambda (symbol)
-	     (let ((next-state (goto closure symbol)))
-	       (parse grammar k first-map
-		      next-state
-		      (c-cons (and (not (null? the-next-nonterminals))
-				   shift-nonterminal)
-			      (c-take (- (active next-state) 1)
-				      continuations))
-		      input)))
-	   fail))
+	 (define (shift-terminal terminal input fail)
+	   (the-trick
+	    terminal (next-terminals closure grammar)
+	    (lambda (symbol)
+	      (let ((next-state (goto closure symbol)))
+		(parse grammar k first-map
+		       next-state
+		       (c-cons (and (not (null? the-next-nonterminals))
+				    shift-nonterminal)
+			       (c-take (- (active next-state) 1)
+				       continuations))
+		       input)))
+	    fail))
 
-        (let ((accept-items (accept closure)))
-	  (shift-terminal
-	   (car input) (cdr input)
-	   (lambda ()
-	     (select-lookahead-item-the-trick
-	      accept-items k input
-	      (lambda (item)
-		((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
-					  shift-nonterminal)
-				     continuations)
-			     (length (item-rhs item)))
-		 (item-lhs item) input))
-	      (lambda () 'error))))))))
+	   (shift-terminal
+	    (car input) (cdr input)
+	    (lambda ()
+	      (select-lookahead-item-the-trick
+	       (accept closure) k input
+	       (lambda (item)
+		 ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
+					   shift-nonterminal)
+				      continuations)
+			      (length (item-rhs item)))
+		  (item-lhs item) input))
+	       (lambda () 'error))))))))
 
 ;; ~~~~~~~~~~~~
 
