@@ -130,12 +130,10 @@
 	 => (lambda (symbol)
 	      (_memo
 	       (begin
-		 (_memo
-		  (begin
-		    (set! *attribute-value* (cdr (stream-car *input*)))
-		    (set! *input* (stream-cdr *input*))
-		    (set! *error-status* (move-error-status *error-status*))))
-		 (shift symbol maybe-shift-nonterminal handle-error)))))
+		 (set! *attribute-value* (cdr (stream-car *input*)))
+		 (set! *input* (stream-cdr *input*))
+		 (set! *error-status* (move-error-status *error-status*))))
+	      (shift symbol maybe-shift-nonterminal handle-error)))
 	((find-lookahead-item accept-items k *input*) => reduce)
 	(else (handle-error)))))))
 
