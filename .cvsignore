@@ -1,2 +1,5 @@
 *.image
+config.*
+configure
+essence
 genext
