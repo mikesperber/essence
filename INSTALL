@@ -1,4 +1,4 @@
-Installation instructions for Esssence
+Installation instructions for Essence
 ======================================
 
 For building and running Essence, you need an installed version of
@@ -6,7 +6,7 @@ Scheme 48, version 0.51 or higher.  Essence has been tested with 0.51
 thru 0.53.
 
 Before installation, run ./configure in the Essence toplevel
-directory. This shell script attempts to guess correct values for
+directory.  This shell script attempts to guess correct values for
 various system-dependent variables used during compilation, and
 creates the Makefile.  (Currently, it mainly sets the installation
 directory and figures out what program to use for installing files.)
@@ -54,4 +54,4 @@ For other targets and options, consult Makefile.in.
 Enjoy!
 
 Mike Sperber <sperber@informatik.uni-tuebingen.de>
-Peter Thiemann <thiemann@informatik.uni-tuebingen.de>
+Peter Thiemann <thiemann@informatik.uni-freiburg.de>

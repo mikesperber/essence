@@ -2,7 +2,7 @@
   '(("help" "h" help)
     ("g" "goal-proc" "goal-procedure" parameter goal-procedure)
     ("m" "method" parameter method)
-    ("l" "lookahead" parameter method)))
+    ("l" "lookahead" parameter lookahead)))
 
 (define *usage*
   '("Usage:"
@@ -88,7 +88,8 @@
 		       ((string-ci=? "lr" (cdr stuff)) 'lr)
 		       ((string-ci=? "slr" (cdr stuff)) 'slr)
 		       (else
-			(error "Invalid method.~%"))))))))
+			(error "Invalid method.~%")))))
+		   (else 'slr))))
 	     
 	     (load input-file-name *grammar-scratch-package*)
 	     

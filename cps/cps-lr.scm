@@ -163,7 +163,7 @@
 	       (c-nil)
 	       (c-nil)
 	       (if #t
-		   (lambda (error-status) (error "unhandled parse error"))
+		   (lambda () (error "unhandled parse error"))
 		   #f))))
 
 (define (c-take n l)

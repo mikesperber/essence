@@ -251,7 +251,7 @@ $(IMAGE): $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm \
 	 done;								\
 	 echo ",load-package $(PARSER_VARIANT)";			\
 	 echo ",load-package $(PARSER_VARIANT)-generate";		\
-	 echo ",dump $(IMAGE)";						\
+	 echo ",dump $(IMAGE) \"$(distname)\"";				\
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(GENEXT_HEAPSIZE)
 
@@ -269,7 +269,7 @@ install-image: genext \
 	 echo ",load-package $(PARSER_VARIANT)";			\
 	 echo ",load-package $(PARSER_VARIANT)-generate";		\
 	 echo ",translate =essence/ $(sharedir)/";			\
-	 echo ",dump $(TEMPDIR)/$(IMAGE)";				\
+	 echo ",dump $(TEMPDIR)/$(IMAGE) \"$(distname)\"";		\
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(GENEXT_HEAPSIZE) &&			\
 	$(INSTALL_DATA) $(TEMPDIR)/$(IMAGE) $(libdir) &&		\

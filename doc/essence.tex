@@ -104,8 +104,8 @@
   specific knowledge of partial evaluation is required to use Essence.
 \end{abstract}
 %
-This document assumes basic knowledge about the basics S-attributed
-grammars and LR parsing, available in almost any serious compiler
+This document assumes elementary knowledge about S-attributed
+grammars and LR parsing, available in almost any compiler
 construction
 textbook~\cite{Chapman1987,SippuSoisalon-Soininen1990,AhoSethiUllman1986,WilhelmMaurer1995}.
 It may also be helpful to study the documentation of more traditional
@@ -149,7 +149,7 @@ Given a grammar, parsing can proceed in one of two modes:
 Currently, Essence itself only runs under
 Scheme~48~\cite{KelseyRees1995}.  However, the generated parsers run
 under any R$^5$RS~\cite{KelseyClingerRees1998} Scheme.  Moreover, the
-dependencies on non-standard features of Scheme which Essence uses
+dependencies on non-standard features of Scheme48 which Essence uses
 have been carefully factored out with the help of the Scheme~48 module
 system; making it work in any given Scheme implementation is not hard.
 
@@ -169,8 +169,8 @@ Context-free grammars are at the heart of parser generation.  Essence
 allows specifying so-called \emph{S-attributed grammars} with
 evaluation rules for synthesized attributes.  The assumption is that
 each node in the parse tree carries an instance of exactly one
-synthesized attribute, and an Essence grammar provides an attribution
-along with production to describe how to compute it.
+synthesized attribute, and an Essence grammar provides an expression describing 
+how to compute the attribute along with each production.
 
 The structure \codefont{grammar} provides a defining form for
 grammars.  (It also provides numerous accessors and algorithms over
@@ -180,7 +180,7 @@ An Essence grammar consists of two data objects: a representation of
 the grammar itself, and an enumeration (see \filename{doc/big-scheme.txt}
 in the Scheme~48 distribution for a description of the enumeration
 facility in Scheme~48) which is needed to symbolically encode the
-input to the parser.  The \codefont{define-grammar} from the
+input to the parser.  The macro \codefont{define-grammar} from the
 \codefont{grammar} structure form defines both:
 
 \label{form:define-grammar}
@@ -304,14 +304,15 @@ one binding called \codefont{parse}:
   parsing or SLR parsing.
 \item \var{Input} is a \link{stream}{sec:streams} (as per the
   \codefont{stream} structure) consisting of enumerands of the
-  terminals of \var{grammar}.  It is the actual input to the parser.
+  terminals of \var{grammar} paired with their attribute values.  It is the
+  actual input to the parser. 
   
-  Note that this is a stream of \emph{numbers}.  These are easiest
-  generated via the \codefont{enumerated} structure of Scheme~48.  In
-  the absence of an implementation of \codefont{grammar} and
-  \codefont{enumerated}, the \link{list of components}[ in the
-  previous section]{list:grammar-enum} describes the mapping between
-  grammar symbols and enumerands; the enumerands are 0-based.
+  The stream actually contains the \emph{ordinal numbers} of the enumerated
+  values.  These are easiest obtained via the \codefont{enumerated} structure
+  of Scheme~48.  In the absence of an implementation of \codefont{grammar} and
+  \codefont{enumerated}, the \link{list of components}[ in the previous
+  section]{list:grammar-enum} describes the mapping between grammar symbols and
+  enumerands; the enumerands are 0-based.
 \end{itemize}
 %
 \ide{Parse} returns the result of attribute evaluation on the parse
@@ -342,7 +343,7 @@ an \codefont{error} procedure which accepts one argument, an error
 message.  The specialized parser will call \codefont{error} when an
 unrecoverable error occurs.
 
-\paragraph{Batch operation}
+\subsubsection*{Batch operation}
 Installation of Essence creates a binary called \filename{essence}.
 When called with a \codefont{--help} or \codefont{-h} argument, it
 prints a synopsis of its syntax:
@@ -373,7 +374,7 @@ essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
   number.  The default is \texttt{1}.
 \end{itemize}
 
-\paragraph{REPL operation}
+\subsubsection*{REPL operation}
 The \filename{generator-packages.scm} configuration file defines a
 structure \codefont{cps-lr-generate} which offers a procedure that
 generates specialized parsers:
@@ -505,6 +506,71 @@ Apart from the first catch-all rule containing \codefont{\$error}, the
 parser will also, when encountering an error inside a parenthesized
 expression, skip until the next closing parenthesis to resume parsing.
 
+
+\section{Example Session}
+\label{sec:example-session}
+
+To see all this in action, we work through a little example involving one of
+the provided example grammars. First, to start the system, type
+\begin{verbatim}
+% scheme48 -i essence.image -h 8000000
+\end{verbatim}
+at the shell prompt. The mechanism to define a grammar are available from
+structure \codefont{grammar} (see~\ref{sec:grammars}). To open the structure
+type
+\begin{verbatim}
+> ,open grammar
+\end{verbatim}
+to the Scheme48 system, followed by
+\begin{verbatim}
+> ,load examples/toy-grammars.scm
+\end{verbatim}
+to load the definitions for some simple grammars.
+
+Loading the corresponding inputs requires enumerated values, hence
+\begin{verbatim}
+> ,open enumerated
+> ,load examples/toy-inputs.scm
+\end{verbatim}
+defines the example inputs.
+
+As indicated in Sec.~\ref{sec:streams}, the input to the parser comes in form
+of a stream. To open the stream module type
+\begin{verbatim}
+> ,open stream
+\end{verbatim}
+
+Open the parser module by typing
+\begin{verbatim}
+> ,open cps-lr
+\end{verbatim}
+to gain access to the \codefont{parse}
+function (see Sec.~\ref{sec:running-a-parser}). 
+
+As a sample run, consider the grammar \codefont{g10} which specifies arithmetic 
+expressions. The terminals \codefont{l} and \codefont{r} stand for opening
+and closing brackets, whereas \codefont{n} stands for a number.
+\begin{verbatim}
+> (parse g10 1 'lr (list->stream i10-1))
+147
+\end{verbatim}
+
+To specialize a parser requires to open the structure
+\codefont{cps-lr-generate}:
+\begin{verbatim}
+> ,open cps-lr-generate
+\end{verbatim}
+The \codefont{generate-parser} function from this structure (see
+Sec.~\ref{sec:parser-generation}) performs the specialization:
+\begin{verbatim}
+> (generate-parser g10 1 'lr 'expr-parser)
+\end{verbatim}
+
+To perform the same specialization task via the command line interface type
+\begin{verbatim}
+% ./essence -g expr-parser -m lr -l 1 \
+            examples/toy-grammars.scm g10 /tmp/expr-parser.scm
+\end{verbatim}
 
 \bibliographystyle{plain} 
 \bibliography{abbrevs,papers,books,theses,misc,collections}
