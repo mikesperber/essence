@@ -40,10 +40,9 @@
 		       state lhs input)))))))
 
 (define (parse grammar k input)
-  (let ((first-map (compute-first grammar k)))
-    (ds-parse grammar k
-	      (lambda (state)
-		(compute-lr-closure state grammar k first-map))
-	      (list (make-item (grammar-start-production grammar) 0 '()))
-	      input)))
+  (ds-parse grammar k
+	    (lambda (state)
+	      (compute-lr-closure state grammar k))
+	    (list (make-item (grammar-start-production grammar) 0 '()))
+	    input))
 

@@ -50,17 +50,15 @@
 		     input))))))
 
 (define (parse grammar k method input)
-  (let ((start-production (grammar-start-production grammar))
-	(first-map (compute-first grammar k)))
+  (let ((start-production (grammar-start-production grammar)))
 
     (ds-parse grammar
 	      k
 	      (if (equal? method 'lr)
 		  (lambda (state)
-		    (compute-lr-closure state grammar k first-map))
-		  (let ((follow-map (compute-follow grammar k first-map)))
-		    (lambda (state)
-		      (compute-slr-closure state grammar k follow-map))))
+		    (compute-lr-closure state grammar k))
+		  (lambda (state)
+		    (compute-slr-closure state grammar k)))
 	      (list (make-item start-production 0 '()))
 	      input)))
 

@@ -31,13 +31,12 @@
      (else 'error))))
 
 (define (parse grammar k input)
-  (let ((first-map (compute-first grammar k)))
-    (cps-parse grammar k 
-	       (lambda (state)
-		 (compute-lr-closure state grammar k first-map))
-	       (list (make-item (grammar-start-production grammar) 0 '()))
-	       '()
-	       input)))
+  (cps-parse grammar k 
+	     (lambda (state)
+	       (compute-lr-closure state grammar k))
+	     (list (make-item (grammar-start-production grammar) 0 '()))
+	     '()
+	     input))
 
 (define (take n l)
   (if (zero? n)

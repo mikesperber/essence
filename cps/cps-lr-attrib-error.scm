@@ -132,26 +132,23 @@
       (else (reduce))))))
 
 (define (parse grammar k method input)
-  (let* ((start-production (grammar-start-production grammar))
-	 (first-map (compute-first grammar k)))
+  (let ((start-production (grammar-start-production grammar)))
 
-    (cps-parse
-     grammar
-     k
-     (if (equal? method 'lr)
-	 (lambda (state)
-	   (compute-lr-closure state grammar k first-map))
-	 (let ((follow-map (compute-follow grammar k first-map)))
-	   (lambda (state)
-	     (compute-slr-closure state grammar k follow-map))))
-     (list (make-item start-production 0 '()))
-     (c-nil)
-     (c-nil)
-     (if #t
-	 (lambda (error-status input) (error "unhandled parse error"))
-	 #f)
-     0
-     input)))
+    (cps-parse grammar
+	       k
+	       (if (equal? method 'lr)
+		   (lambda (state)
+		     (compute-lr-closure state grammar k))
+		   (lambda (state)
+		     (compute-slr-closure state grammar k)))
+	       (list (make-item start-production 0 '()))
+	       (c-nil)
+	       (c-nil)
+	       (if #t
+		   (lambda (error-status input) (error "unhandled parse error"))
+		   #f)
+	       0
+	       input)))
 
 (define (c-take n l)
   (if (zero? n)
