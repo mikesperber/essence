@@ -26,11 +26,10 @@
 (define-interface lr-spectime-interface
   (export compute-lr-closure
 	  compute-slr-closure add-slr-lookahead
-	  goto accept initial?
+	  goto accept initial? handles-error?
 	  active next-terminals next-nonterminals
 	  make-item
-	  item-lhs item-rhs item-production item-lookahead
-	  items->trie))
+	  item-lhs item-rhs item-production item-lookahead))
 
 (define-interface parser-interface
   (export parse))
@@ -55,21 +54,23 @@
   (files (common lr-spectime)))
 
 (define-structure ds-lr-naive parser-interface
-  (open scheme signals grammar lr-spectime stream
-	cogen-directives)
-  (begin
-    (define _error error))
+  (open scheme signals grammar lr-spectime stream)
   (files (common lookahead)
 	 (direct direct-lr-naive)))
 
 (define-structure ds-lr parser-interface
   (open scheme signals grammar lr-spectime stream
 	cogen-directives)
-  (begin
-    (define _error error))
   (files (common the-trick)
 	 (common lookahead)
 	 (direct direct-lr)))
+
+(define-structure ds-lr-imperative parser-interface
+  (open scheme signals grammar lr-spectime stream
+	cogen-directives)
+  (files (common the-trick)
+	 (common lookahead)
+	 (direct direct-lr-imperative)))
 
 (define-structure cps-lr-naive parser-interface
   (open scheme signals grammar lr-spectime stream
@@ -81,7 +82,7 @@
   (open scheme signals grammar lr-spectime stream
 	cogen-directives)
   (files (common the-trick)
-	 (common lookahead)
+	 (common lookahead-trie)
 	 (cps cps-lr)))
 
 (define-structure cps-lr-attrib parser-interface
@@ -90,3 +91,10 @@
   (files (common the-trick)
 	 (common lookahead)
 	 (cps cps-lr-attrib)))
+
+(define-structure cps-lr-attrib-error parser-interface
+  (open scheme signals grammar lr-spectime stream
+	cogen-directives)
+  (files (common the-trick)
+	 (common lookahead)
+	 (cps cps-lr-attrib-error)))
