@@ -1,3 +1,30 @@
+; Balanced parenthesis
+
+(define-grammar g08 g08-symbol
+  (S T)
+  (l r)
+  S
+  (((S S T) $1)
+   ((S T) $1)
+   ((T l S r) $1)
+   ((T l r) $1)))
+
+(define i08-1 (list (cons (enum g08-symbol l) #f)
+		    (cons (enum g08-symbol r) #f)
+		    (cons (enum g08-symbol l) #f)
+		    (cons (enum g08-symbol l) #f)
+		    (cons (enum g08-symbol r) #f)
+		    (cons (enum g08-symbol r) #f)))
+
+(define i08-2 (list (cons (enum g08-symbol l) #f)
+		    (cons (enum g08-symbol l) #f)
+		    (cons (enum g08-symbol l) #f)
+		    (cons (enum g08-symbol l) #f)
+		    (cons (enum g08-symbol r) #f)
+		    (cons (enum g08-symbol r) #f)))
+
+; Constant arithmetic expressions
+
 (define-grammar g10 g10-symbol
   (E T P)
   (+ - * / l r n)
