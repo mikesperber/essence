@@ -62,7 +62,13 @@
 			      (c-take keep attribute-values))
 		      handle-error-here))
 
-	 (set! *input* (advance-input *error-status* *input*))
+	 (_memo
+	  (set! *input*
+		(cond
+		 ((zero? *error-status*) *input*)
+		 ((stream-empty? *input*)
+		  (error "parse error: premature end of input"))
+		 (else (stream-cdr *input*)))))
 
 	 (let loop ()
 
@@ -131,7 +137,10 @@
 	       (begin
 		 (set! *attribute-value* (cdr (stream-car *input*)))
 		 (set! *input* (stream-cdr *input*))
-		 (set! *error-status* (move-error-status *error-status*))))
+		 (set! *error-status*
+		       (if (zero? *error-status*)
+			   *error-status*
+			   (- *error-status* 1)))))
 	      (shift symbol maybe-shift-nonterminal handle-error)))
 	((find-lookahead-item accept-items k *input*) => reduce)
 	(else (handle-error)))))))

@@ -52,7 +52,12 @@
 	      (keep (- (active next-state) 1))
 	      (next-closure (compute-closure next-state grammar k))
 	      (next-accept-items (accept next-closure))
-	      (input (advance-input error-status input)))
+	      (input
+	       (cond
+		((zero? error-status) input)
+		((stream-empty? input)
+		 (error "parse error: premature end of input"))
+		(else (stream-cdr input)))))
 
 	 (define (recover attribute-value input)
 	   (cps-parse grammar k compute-closure
@@ -128,7 +133,10 @@
 	 => (lambda (symbol)
 	      (shift symbol (cdr (stream-car input))
 		     handle-error
-		     (move-error-status error-status)
+		     (_memo
+		      (if (zero? error-status)
+			  error-status
+			  (- error-status 1)))
 		     (stream-cdr input))))
 	((find-lookahead-item accept-items k input) => reduce)
 	(else (handle-error error-status input)))))))
