@@ -63,6 +63,13 @@
 	 (direct parse-result)
 	 (direct direct-lr)))
 
+(define-structure cps-lr-naive parser-interface
+  (open scheme signals grammar lr-spectime stream
+	cogen-directives)
+  (files (common the-trick)
+	 (common lookahead)
+	 (cps cps-lr-naive)))
+
 (define-structure cps-lr parser-interface
   (open scheme signals grammar lr-spectime stream
 	cogen-directives)
