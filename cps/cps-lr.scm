@@ -5,11 +5,13 @@
   (c-cons c-car c-cdr)
   (c-nil))
 
+(define-memo _memo 1)
+
 (define
-  (parse grammar k compute-closure state continuations input)
+  (cps-parse grammar k compute-closure state continuations input)
   (_memo
    (if (final? state grammar)
-       (if (equal? (eoi-terminal) (car input))
+       (if (equal? (grammar-eoi grammar) (car (stream-car input)))
 	   'accept
 	   'error)
        (let* ((closure (compute-closure state grammar))
@@ -17,13 +19,13 @@
 
 	 (define (shift symbol input)
 	   (let ((next-state (goto closure symbol)))
-	     (parse grammar k compute-closure
-		    next-state
-		    (c-cons (and (not (null? the-next-nonterminals))
-				 shift-nonterminal)
-			    (c-take (- (active next-state) 1)
-				    continuations))
-		    input)))
+	     (cps-parse grammar k compute-closure
+			next-state
+			(c-cons (and (not (null? the-next-nonterminals))
+				     shift-nonterminal)
+				(c-take (- (active next-state) 1)
+					continuations))
+			input)))
 
 	 (define (shift-nonterminal nonterminal input)
 	   (the-trick-cannot-fail
@@ -37,7 +39,7 @@
 	    fail))
 
 	 (shift-terminal
-	  (car input) (cdr input)
+	  (car (stream-car input)) (stream-cdr input)
 	  (lambda ()
 	    (select-lookahead-item
 	     (accept closure) k input
@@ -47,38 +49,39 @@
 				    continuations)
 			    (length (item-rhs item)))
 		(item-lhs item) input))
-	     (lambda () 'error))))))))
+	     (lambda () 'lookahead-error))))))))
 
-;; ~~~~~~~~~~~~
-
-(define (do-parse source-grammar k method input)
-  (let* ((grammar (source-grammar->grammar source-grammar k))
-	 (start-production (grammar-start-production grammar))
+(define (parse grammar k method input)
+  (let* ((start-production (grammar-start-production grammar))
+	 (terminated-start-production
+	  (make-production (production-lhs start-production)
+			   (append (production-rhs start-production)
+				   (make-list k (grammar-eoi grammar)))
+			   (production-attribution start-production)))
 	 (first-map (compute-first grammar k)))
 
     (cond
      ((equal? method 'lr)
-      (parse grammar
-	     k
-	     (lambda (state grammar)
-	       (compute-lr-closure state grammar k first-map))
-	     (list (make-item start-production
-			      0
-			      (cdr (production-rhs start-production))))
-	     (c-nil)
-	     input))
+      (cps-parse grammar
+		 k
+		 (lambda (state grammar)
+		   (compute-lr-closure state grammar k first-map))
+		 (list (make-item terminated-start-production
+				  0
+				  (cdr (production-rhs start-production))))
+		 (c-nil)
+		 input))
      ((equal? method 'slr)
       (let ((follow-map (compute-follow grammar k first-map)))
-	(parse grammar
-	       k
-	       (lambda (state grammar)
-		 (compute-slr-closure state grammar k follow-map))
-	       (add-slr-lookahead (list (make-item start-production 0 #f))
-				  follow-map)
-	       (c-nil)
-	       input))))))
-
-;; ~~~~~~~~~~~~
+	(cps-parse grammar
+		   k
+		   (lambda (state grammar)
+		     (compute-slr-closure state grammar k follow-map))
+		   (add-slr-lookahead
+		    (list (make-item terminated-start-production 0 #f))
+		    follow-map)
+		   (c-nil)
+		   input))))))
 
 (define (c-take n l)
   (if (zero? n)

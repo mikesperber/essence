@@ -1,148 +1,15 @@
-;; LR support code needed at generation time
-;; =========================================
+; LR support code needed at generation time
 
-;; Source grammars
-;; ~~~~~~~~~~~~~~~
-
-(define rule-production car)
-(define (rule-contains-attribution? rule)
-  (not (null? (cdr rule))))
-(define rule-attribution cadr)
-
-(define (make-attribution-arglist i)
-  (let loop ((i i) (l '()))
-    (if (zero? i)
-	l
-	(loop (- i 1)
-	      (cons (string->symbol
-		     (string-append "$" (number->string i)))
-		    l)))))
-
-(define (make-trivial-attribution rhs-length)
-  `(lambda ,(make-attribution-arglist rhs-length)
-     '$1))
-
-(define (rule-make-attribution rule)
-  (let ((rhs-length (length (cdr (rule-production rule)))))
-    `(lambda ,(make-attribution-arglist rhs-length)
-       ,(if (rule-contains-attribution? rule)
-	    (rule-attribution rule)
-	    '$1))))
-
-(define (source-grammar->grammar grammar k)
-  (let ((nonterminals (source-grammar-nonterminals grammar))
-	(source-terminals (source-grammar-terminals grammar))
-	(rules (source-grammar-rules grammar))
-	(start (source-grammar-start grammar)))
-	    
-    (let ((nonterminal-start (first-nonterminal-index source-terminals))
-	  (production-index 1))
-
-      (define (xlate symbol)
-	(if (eq? '@error@ symbol)
-	    error-terminal
-	    (let ((p (list-position symbol nonterminals)))
-	      (if p
-		  (+ p 1 nonterminal-start)
-		  (terminal->index source-terminals symbol)))))
-
-      (define (rule->production rule)
-	(let* ((production (rule-production rule))
-	       (lhs (xlate (car production)))
-	       (rhs (map xlate (cdr production)))
-	       (attribution (rule-make-attribution rule))
-	       (production
-		(make-production production-index lhs rhs attribution)))
-	  (set! production-index (+ 1 production-index))
-	  production))
-
-      (let* ((start (xlate start))
-	     (productions
-	      (cons (make-production
-		     0 nonterminal-start
-		     (cons start
-			   (make-list k eoi-terminal))
-		     (make-trivial-attribution (+ 1 k)))
-		    (map rule->production rules)))
-	     (nonterminals (cons nonterminal-start (map xlate nonterminals)))
-	     (terminals (map xlate source-terminals)))
-
-	(make-grammar nonterminals terminals productions start
-		      (if (source-grammar-has-terminal-attribution? grammar)
-			  `(lambda (terminal)
-			     ,(source-grammar-terminal-attribution grammar))
-			  #f))))))
-
-;; Grammars
-;; ~~~~~~~~
-
-(define (make-grammar nonterminals terminals productions start
-		      terminal-attribution)
-  (vector nonterminals terminals productions start
-	  terminal-attribution))
-
-(define (grammar-nonterminals grammar)
-  (vector-ref grammar 0))
-
-(define (grammar-internal-start grammar)
-  (car (grammar-nonterminals grammar)))
-
-(define (grammar-terminals grammar)
-  (vector-ref grammar 1))
-
-(define (grammar-productions grammar)
-  (vector-ref grammar 2))
-
-(define (grammar-start-production grammar)
-  (car (grammar-productions grammar)))
-
-(define (grammar-start grammar)
-  (vector-ref grammar 3))
-
-(define (grammar-terminal-attribution grammar)
-  (vector-ref grammar 4))
-
-(define (make-production index lhs rhs attribution)
-  (vector index lhs rhs attribution))
-	  
-(define (production-index p)
-  (vector-ref p 0))
-
-(define (production-lhs p)
-  (vector-ref p 1))
-
-(define (production-rhs p)
-  (vector-ref p 2))
-
-(define (production-attribution p)
-  (vector-ref p 3))
-
-(define (terminal? sym grammar)
-  (or (equal? (eoi-terminal) sym)
-      (equal? (error-terminal) sym)
-      (member sym (grammar-terminals grammar))))
-
-(define (nonterminal? sym grammar)
-  (not (terminal? sym grammar)))
-
-(define (production<? p1 p2)
-  (< (production-index p1) (production-index p2)))
-
-(define (sort-nonterminals xs)
-  (sort-list xs <))
-
-(define (sort-terminals xs)
-  (sort-list xs <))
-
-
-(define (terminals<? ts1 ts2)
+(define (number-list<? ts1 ts2)
   (cond ((null? ts1) (not (null? ts2)))
 	((null? ts2) #f)
 	((< (car ts1) (car ts2)) #t)
 	((> (car ts1) (car ts2)) #f)
-	(else (terminals<? (cdr ts1) (cdr ts2)))))
+	(else (number-list<? (cdr ts1) (cdr ts2)))))
 
-;; ---
+(define (production<? p1 p2)
+  (number-list<? (cons (production-lhs p1) (production-rhs p1))
+		 (cons (production-lhs p2) (production-rhs p2))))
 
 (define (productions-with-lhs lhs grammar)
   (filter (lambda (production)
@@ -161,7 +28,7 @@
 (define (item-lookahead item)
   (vector-ref item 2))
 
-(define lookahead<? terminals<?)
+(define lookahead<? number-list<?)
 
 (define (item-lhs item)
   (production-lhs (item-production item)))
@@ -366,7 +233,7 @@
 
 (define (next-terminals state-closure grammar)
   (filter (lambda (symbol)
-	    (and (not (equal? error-terminal symbol))
+	    (and (not (equal? (grammar-error grammar) symbol))
 		 (terminal? symbol grammar)))
 	  (next-symbols state-closure grammar)))
 
@@ -377,7 +244,7 @@
 
 (define (handles-error? state-closure grammar)
   (or-map (lambda (symbol)
-	    (equal? error-terminal symbol))
+	    (equal? (grammar-error grammar) symbol))
 	  (next-symbols state-closure grammar)))
 
 (define (accept state-closure)
@@ -392,7 +259,7 @@
   (let loop ((item-set state))
     (and (not (null? item-set))
 	 (let ((item (car item-set)))
-	   (or (and (equal? (grammar-internal-start grammar)
+	   (or (and (equal? (grammar-start grammar)
 			    (item-lhs item))
 		    (= 1 (item-position item)))
 	       (loop (cdr item-set)))))))
@@ -540,7 +407,7 @@
   ;; ground
   (map (lambda (nt)
 	 (cons nt
-	       (if (equal? nt (grammar-internal-start grammar))
+	       (if (equal? nt (grammar-start grammar))
 		   '(())
 		   '())))
        (grammar-nonterminals grammar)))
@@ -700,3 +567,10 @@
            (loop (cdr l) (cons (car l) yes) no))
           (else
            (loop (cdr l) yes (cons (car l) no))))))
+
+(define (make-list k fill)
+  (let loop ((k k) (r '()))
+    (if (zero? k)
+	r
+	(loop (- 1 k) (cons fill r)))))
+

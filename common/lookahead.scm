@@ -1,7 +1,7 @@
-(define (in-take n l)
+(define (in-take n s)
   (if (zero? n)
       '()
-      (cons (car l) (in-take (- n 1) (cdr l)))))
+      (cons (car (stream-car s)) (in-take (- n 1) (stream-cdr s)))))
 
 (define-without-memoization
   (select-lookahead-item item-set k input cont fail)

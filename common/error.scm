@@ -1,1 +1,1 @@
-(define-primitive _error - error)
+(define-primitive error - error)

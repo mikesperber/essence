@@ -1,76 +1,80 @@
-;; Interfaces
-;; ~~~~~~~~~~
+; Interfaces
 
-(define-interface source-grammar-interface
-  (export (source-grammar-terminals (proc (:value) :value))
-	  (source-grammar-nonterminals (proc (:value) :value))
-	  (source-grammar-rules (proc (:value) :value))
-	  (source-grammar-start  (proc (:value) :value))
-	  (source-grammar-has-terminal-attribution? (proc (:value) :boolean))
-	  (source-grammar-terminal-attribution (proc (:value) :value))
-	  (first-nonterminal-index :number)
-	  (list-position (proc (:value :value) :number))
-	  (make-list (proc (:number :value) :value))
-	  (terminal->index (proc (:value :value) :number))
-	  (eoi-terminal :number)
-	  (error-terminal :number)))
-  
-(define-interface lr-runtime-interface
-  (export (eoi-terminal (proc () :number))
-	  (error-terminal (proc () :number))
-	  (source-grammar-terminals (proc (:value) :value))
-	  (translate-input-list (proc (:value :value) :value))
-	  (define-terminals (proc (:value) :value))
-	  (terminate-input-list (proc (:value :number) :value))))
+(define-interface cogen-directives-interface
+  (export ((define-without-memoization define-memo define-primitive)
+	   :syntax)
+	  (define-data :syntax)))
 
+(define-interface make-stream-interface
+  (export make-stream))
+
+(define-interface access-stream-interface
+  (export stream-car stream-cdr))
+
+(define-interface grammar-interface
+  (export make-production
+	  grammar-productions grammar-nonterminals
+	  grammar-start grammar-eoi grammar-error
+	  production-lhs production-rhs production-attribution
+
+	  grammar-start-production
+	  terminal? nonterminal?
+	  (define-grammar :syntax)))
+	 
 (define-interface lr-spectime-interface
   (export compute-closure compute-lr-closure
 	  compute-slr-closure add-slr-lookahead
 	  goto accept final?
 	  active next-terminals next-nonterminals
-	  item-lhs item-rhs make-item
+	  make-item
+	  item-lhs item-rhs item-production item-lookahead
 	  items->trie
-	  production-rhs
-	  source-grammar->grammar
-	  grammar-start-production
-	  compute-first compute-follow))
+	  compute-first compute-follow
+
+	  make-list))
+
+(define-interface lr-runtime-interface
+  (export scan-list->stream))
 
 (define-interface parser-interface
-  (export do-parse))
+  (export parse))
 
-;; Structures
-;; ~~~~~~~~~~
+; Structures
 
 (define-structure cogen-directives cogen-directives-interface
-  (open scheme)
-  (files (common cogen-directives)))
+  (open scheme define-record-types)
+  (files (common cogen-directives)
+	 (common defdata)))
 
-(define-structure source-grammar source-grammar-interface
+(define-structures ((access-stream access-stream-interface)
+		    (make-stream make-stream-interface))
   (open scheme)
-  (files (common source-grammar)))
+  (files (common stream)))
 
-(define-structure lr-runtime lr-runtime-interface
-  (open scheme source-grammar)
-  (files (common lr-runtime)))
+(define-structure grammar grammar-interface
+  (open scheme enumerated define-record-types)
+  (files (common grammar)))
 
 (define-structure lr-spectime lr-spectime-interface
-  (open scheme sort source-grammar)
+  (open scheme sort grammar)
   (files (common lr-spectime)))
 
+(define-structure lr-runtime lr-runtime-interface
+  (open scheme make-stream grammar)
+  (files (common lr-runtime)))
+
 (define-structure ds-lr parser-interface
-  (open scheme signals cogen-directives lr-spectime lr-runtime)
+  (open scheme signals cogen-directives lr-spectime)
   (begin
     (define _error error))
-  (files (common memo)
-	 (common the-trick)
+  (files (common the-trick)
 	 (common lookahead)
 	 (direct parse-result)
 	 (direct direct-lr)))
 
 (define-structure cps-lr parser-interface
-  (open scheme signals lr-spectime lr-runtime
-	cogen-directives define-data)
-  (files (common memo)
-	 (common the-trick)
+  (open scheme signals grammar lr-spectime access-stream
+	cogen-directives)
+  (files (common the-trick)
 	 (common lookahead)
 	 (cps cps-lr)))
