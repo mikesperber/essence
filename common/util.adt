@@ -16,6 +16,12 @@
 
 ;; ---
 
+(defprim (make-list k fill)
+  (let loop ((k k) (r '()))
+    (if (zero? k)
+	r
+	(loop (- 1 k) (cons fill r)))))
+
 (defprim (sort-generic leq? xs)
   (letrec
       ((insert
