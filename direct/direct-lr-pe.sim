@@ -19,13 +19,19 @@
 		(define parser-att))
 	(interaction-environment)))
 
-(defprim-opaque (readvar-inp) parser-inp)
 (defprim-opaque (readvar-lhs) parser-lhs)
 (defprim-opaque (readvar-att) parser-att)
 
-(defprim-opaque (set-inp! val) (set! parser-inp val))
 (defprim-opaque (set-lhs! val) (set! parser-lhs val))
 (defprim-opaque (set-att! val) (set! parser-att val))
+
+(defprim-opaque (input-initialize! input) (set! parser-inp input))
+(defprim-opaque (input-advance!) (set! parser-inp (stream-cdr parser-inp)))
+(defprim-opaque (input-lookahead k)
+  (let loop ((input parser-inp) (i 0))
+    (cond
+     ((= i k) (stream-car input))
+     (else (loop (stream-cdr input) (+ i 1))))))
 
 ;;; handle attribute stack
 
@@ -68,14 +74,14 @@
 ;; the trick need be applied to all calls of parse-bar!
 
 (define (direct-parse grammar k first-map state
-		      attribute-stack input)
+		      attribute-stack)
 
 
 
   ;; body of direct-parse
 
   (if (and (final? state grammar)
-	   (equal? '$ (input-char (stream-car input))))
+	   (equal? '$ (input-char (input-lookahead 0))))
       (car attribute-stack)
       (let* ((closure (compute-closure state grammar k first-map))
 	     (ts (next-terminals closure grammar))
@@ -86,13 +92,13 @@
 
 ;;; local definitions
 
-  (define (select-lookahead-item item-set k input)
-    (let loop ((trie (items->trie item-set k)) (pos 0) (input input))
+  (define (select-lookahead-item item-set k)
+    (let loop ((trie (items->trie item-set k)) (pos 0))
       (if (null? trie)
 	  (continue #f)
 	  (if (= pos k)
 	      (continue trie)
-	      (let ((ch (stream-car input)))
+	      (let ((ch (input-lookahead pos)))
 		(let inner-loop ((trie trie))
 		  (if (null? trie)
 		      (continue #f)
@@ -102,21 +108,22 @@
 				    #f
 				    (loop (cdr la-set)))))
 			  (loop (cdar trie)
-				(+ pos 1)
-				(if (= (+ pos 1) k) '() (stream-cdr input)))
+				(+ pos 1))
 			  (inner-loop (cdr trie))))))))))
 
   (define (continue production)
     (if (not production)
 	;; shift-terminal
-	(let* ((p (stream-car input))
+	(let* ((p (input-lookahead 0))
 	       (ch (input-char p)))
 	  (let loop ((ts ts))
 	    (if (null? ts)
 		(_sim-error 'direct-parse "can't shift on" ch)
 		(if (equal? (car ts) ch)
-		    (parse-bar grammar k first-map closure (car ts)
-			       (input-attr p) attribute-stack (stream-cdr input))
+		    (begin
+		      (input-advance!)
+		      (parse-bar grammar k first-map closure (car ts)
+				 (input-attr p) attribute-stack))
 		    (loop (cdr ts))))))
 	(let* ((rhs-length (length (production-rhs production)))
 	       (lhs (production-lhs production))
@@ -131,31 +138,32 @@
 	  (if (zero? rhs-length)
 	      ;; shift-nonterminal
 	      (parse-bar grammar k first-map closure lhs
-			 attribute-value attribute-stack input)
-	      (begin (set-lhs! lhs) (set-att! attribute-value) (set-inp! input)
+			 attribute-value attribute-stack)
+	      (begin (set-lhs! lhs) (set-att! attribute-value)
 		     rhs-length)))))
 
 ;;; body of let*
 	
 	(if (null? accept-items)
 	    ;; shift-terminal
-	    (let* ((p (stream-car input))
+	    (let* ((p (input-lookahead 0))
 		   (ch (input-char p)))
 	      (let loop ((ts ts))
 		(if (null? ts)
 		    (_sim-error 'direct-parse "can't shift on" ch)
 		    (if (equal? (car ts) ch)
-			(parse-bar grammar k first-map closure (car ts)
-				   (input-attr p) attribute-stack (stream-cdr input))
+			(begin
+			  (input-advance!)
+			  (parse-bar grammar k first-map closure (car ts)
+				     (input-attr p) attribute-stack))
 			(loop (cdr ts))))))
-	    (select-lookahead-item accept-items k input)))))
+	    (select-lookahead-item accept-items k)))))
 
 (define (parse-bar grammar k first-map closure sym
-		   attribute-value attribute-stack input)
+		   attribute-value attribute-stack)
   (let* ((next-state (goto closure sym))
 	 (result (direct-parse grammar k first-map next-state
-			       (push attribute-value attribute-stack)
-			       input)))
+			       (push attribute-value attribute-stack))))
     (if (final? next-state grammar)
 	result
 	(let* ((nts (next-nonterminals closure grammar))
@@ -165,21 +173,21 @@
 	      (if (< 1 the-dot)
 		  (- the-dot 1)
 		  (let* ((the-lhs (readvar-lhs))
-			 (the-att (readvar-att))
-			 (the-inp (readvar-inp)))
+			 (the-att (readvar-att)))
 	      (let loop ((nts nts))
 		(if (null? (cdr nts))
 		    (parse-bar grammar k first-map closure (car nts)
-			       the-att attribute-stack the-inp)
+			       the-att attribute-stack)
 		    (if (equal? (car nts) the-lhs)
 			(parse-bar grammar k first-map closure (car nts)
-				   the-att attribute-stack the-inp)
+				   the-att attribute-stack)
 			(loop (cdr nts))))))))))))
 
 (define (direct-parse-main source-grammar k input)
   (let* ((grammar (source-grammar->grammar source-grammar k))
 	 (start-production (car (grammar-productions grammar))))
     (allocate-variables)
+    (input-initialize! input)
     (direct-parse grammar
 		  k
 		  (compute-first grammar k)
@@ -187,7 +195,6 @@
 		   (make-item start-production
 			      0
 			      (cdr (production-rhs start-production))))
-		  '()
-		  input)))
+		  '())))
 
 

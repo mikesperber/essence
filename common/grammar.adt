@@ -76,59 +76,6 @@
           (else
            (loop (cdr l) yes (cons (car l) no))))))
 
-;;; when items : [(prod, pos, [ch])]
-;;; then selection : [([ch]^rev, prod)]
-;;; a list of pairs of reversed lookahead string and production
-(defprim (items->selection items)
-  (sort-selection
-   (let loop ((items items))
-     (if (null? items)
-	 '()
-	 (cons
-	  (let ((item (car items)))
-	    (cons (reverse (item-lookahead item))
-		  (item-production item)))
-	  (loop (cdr items)))))))
-
-;;; a trie : [([[ch]], prod)]
-;;; a list of pairs of a lookahead string and a production
-;;; each position of a lookahead string is a set (list) of characters
-(defprim (selection->trie selection k)
-  (let ((process-body
-	 (lambda (la body)
-	   (if (> k 1)
-	       (cons (car body) (cons la (cdr body)))
-	       (cons la (cdr body)))))
-	(maybe-recurse
-	 (lambda (selection)
-	   (if (> k 1)
-	       (selection->trie selection (- k 1))
-	       selection))))
-    (if (null? selection)
-	'()
-	    (maybe-recurse
-	     (let ((select-1 (car selection)))
-	       (let loop ((la (list (caar select-1)))
-			  (body (cons (cdar select-1) (cdr select-1)))
-			  (selection (cdr selection)))
-		 (if (null? selection)
-		     (list (process-body la body))
-		     (let* ((select-2 (car selection))
-			    (la-2 (caar select-2))
-			    (body-2 (cons (cdar select-2) (cdr select-2))))
-		       (if (equal? body body-2)
-			   (loop (cons la-2 la) body (cdr selection))
-			   (cons (process-body la body)
-				 (loop (list la-2) body-2 (cdr selection))))))))))))
-
-(defprim (sort-selection selection)
-  (sort-generic
-   (lambda (x y)
-     (string<? (symbols->string (car x))
-	       (symbols->string (car y))))
-   selection))
-
-;;; this should be the real thing
 ;;; trie of depth k: k nested alists
 ;;; needs at least one item
 (defprim (build-trie items)
@@ -542,3 +489,66 @@
 	  first-map
 	  (loop new-first-map)))))
 
+;;; Follow set computation
+;;; ======================
+
+(defprim (initial-follow-map grammar)
+  ;start symbol must be followed by the empty string to get of the ground
+    (cons (cons 'yummy-yummy '(()))
+	  (map (lambda (nt) (cons nt '()))
+	       (grammar-nonterminals grammar))))
+
+
+;;; perform
+;;; follow (k, A) = U { first (k, beta follow (k, B)) | B -> alpha A beta }
+;;; by iterating over the right sides of all productions, updating the
+;;; follow-set as appropriate
+
+(defprim (next-follow-map grammar k first-map last-follow-map)
+  (let loop ((productions (grammar-productions grammar))
+	     (last-follow-map last-follow-map))
+    (if (null? productions)
+	last-follow-map
+	(let ((lhs (production-lhs (car productions))))
+	  (let rhs-loop ((rhs-rest (production-rhs (car productions)))
+			 (last-follow-map last-follow-map))
+	    (if (null? rhs-rest)
+		(loop (cdr productions) last-follow-map)
+		(let ((sym (car rhs-rest)))
+		  (if (terminal? sym grammar)
+		      (rhs-loop (cdr rhs-rest) last-follow-map)
+		      (let* ((fi-rest (sf-first (cdr rhs-rest) k grammar first-map))
+			     (fo-lhs (cdr (assoc lhs last-follow-map)))
+			     (fo-sym (sf-list-uniq
+				      (pair-map (lambda (xs ys) (append-k k xs ys))
+					       fi-rest fo-lhs))))
+		      (rhs-loop (cdr rhs-rest)
+				(update-follow-map last-follow-map
+						   sym fo-sym)))))))))))
+
+(defprim (update-follow-map follow-map sym fo-sym)
+  (let loop ((follow-map follow-map))
+    (if (equal? (caar follow-map) sym)
+	(cons (cons sym (sf-union fo-sym (cdar follow-map)))
+	      (cdr follow-map))
+	(cons (car follow-map)
+	      (loop (cdr follow-map))))))
+
+(defprim (pair-map f xs ys)
+  (let xs-loop ((xs xs))
+    (if (null? xs)
+	'()
+	(let ((x (car xs)))
+	  (let ys-loop ((ys ys))
+	    (if (null? ys)
+		(xs-loop (cdr xs))
+		(let ((y (car ys)))
+		  (cons (f x y) (ys-loop (cdr ys))))))))))
+
+(defprim (compute-follow grammar k first-map)
+  ;; fixpoint iteration
+  (let loop ((follow-map (initial-follow-map grammar)))
+    (let ((new-follow-map (next-follow-map grammar k first-map follow-map)))
+      (if (first-map-equal? follow-map new-follow-map)
+	  follow-map
+	  (loop new-follow-map)))))
