@@ -22,25 +22,22 @@
 
 (define (ds-parse-bar grammar k compute-closure state symbol input)
   (let ((closure (compute-closure state)))
-    (if (and (initial? closure grammar)
-	     (equal? (grammar-start grammar) symbol))
-	'accept
-	(call-with-values
-	 (lambda ()
-	   (ds-parse grammar k compute-closure
-		     (goto closure symbol) input))
-	 (lambda (lhs dot input)
-	   (cond
-	    ((> dot 1)
-	     (values lhs (- dot 1) input))
-	    ((and (initial? state grammar)
-		  (equal? (grammar-start grammar) lhs))
-	     (if (stream-empty? input)
-		 'accept
-		 (error "parse error")))
-	    (else
-	     (ds-parse-bar grammar k compute-closure
-			   state lhs input))))))))
+    (call-with-values
+     (lambda ()
+       (ds-parse grammar k compute-closure
+		 (goto closure symbol) input))
+     (lambda (lhs dot input)
+       (cond
+	((> dot 1)
+	 (values lhs (- dot 1) input))
+	((and (initial? state grammar)
+	      (equal? (grammar-start grammar) lhs))
+	 (if (stream-empty? input)
+	     'accept
+	     (error "parse error")))
+	(else
+	 (ds-parse-bar grammar k compute-closure
+		       state lhs input)))))))
 
 (define (parse grammar k input)
   (let ((first-map (compute-first grammar k)))

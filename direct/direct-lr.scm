@@ -30,27 +30,24 @@
       (else (reduce))))))
 
 (define (ds-parse-bar grammar k compute-closure closure symbol input)
-  (if (and (initial? closure grammar)
-	   (equal? (grammar-start grammar) symbol))
-      'accept
-      (call-with-values
-       (lambda ()
-	 (ds-parse grammar k compute-closure
-		   (goto closure symbol) input))
-       (lambda (lhs dot input)
-	 (cond
-	  ((> dot 1)
-	   (values lhs (- dot 1) input))
-	  ((and (initial? closure grammar)
-		(equal? (grammar-start grammar) lhs))
-	   (if (stream-empty? input)
-	       'accept
-	       (error "parse error")))
-	  (else
-	   (ds-parse-bar grammar k compute-closure
-			 closure
-			 (the-member lhs (next-nonterminals closure grammar))
-			 input)))))))
+  (call-with-values
+   (lambda ()
+     (ds-parse grammar k compute-closure
+	       (goto closure symbol) input))
+   (lambda (lhs dot input)
+     (cond
+      ((> dot 1)
+       (values lhs (- dot 1) input))
+      ((and (initial? closure grammar)
+	    (equal? (grammar-start grammar) lhs))
+       (if (stream-empty? input)
+	   'accept
+	   (error "parse error")))
+      (else
+       (ds-parse-bar grammar k compute-closure
+		     closure
+		     (the-member lhs (next-nonterminals closure grammar))
+		     input))))))
 
 (define (parse grammar k method input)
   (let ((start-production (grammar-start-production grammar))
