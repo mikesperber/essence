@@ -7,7 +7,7 @@
 
 (define-memo _memo 1)
 
-(define
+(define-without-memoization
   (cps-parse grammar k compute-closure state continuations input)
   (_memo
    (let* ((closure (compute-closure state grammar k))
@@ -24,33 +24,34 @@
 		    input)))
      
      (define (shift-nonterminal nonterminal input)
-       (cond
-	((not (and (initial? state grammar)
-		   (equal? (grammar-start grammar) nonterminal)))
-	 (shift
-	  (the-member nonterminal the-next-nonterminals)
-	  input))
-	((stream-empty? input) 'accept)
-	(else 'error)))
+       (_memo
+	(if (and (initial? state grammar)
+		 (equal? (grammar-start grammar) nonterminal))
+	    (if (stream-empty? input)
+		'accept
+		'error)
+	    (shift
+	     (the-member nonterminal the-next-nonterminals)
+	     input))))
 
-     (define (reduce)
-       (cond
-	((find-lookahead-item (accept closure) k input)
-	 => (lambda (item)
-	      ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
-					shift-nonterminal)
-				   continuations)
-			   (length (item-rhs item)))
-	       (item-lhs item) input)))
-	(else 'error)))
+     (define (reduce item)
+       ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
+				 shift-nonterminal)
+			    continuations)
+		    (length (item-rhs item)))
+	(item-lhs item) input))
 
      (cond
-      ((stream-empty? input) (reduce))
+      ((stream-empty? input)
+       (cond
+	((find-eoi-lookahead-item (accept closure)) => reduce)
+	(else 'error)))
       ((maybe-the-member (car (stream-car input))
 			 (next-terminals closure grammar))
        => (lambda (symbol)
 	    (shift symbol (stream-cdr input))))
-      (else (reduce))))))
+      ((find-lookahead-item (accept closure) k input) => reduce)
+      (else 'error)))))
 
 (define (parse grammar k method input)
   (let ((start-production (grammar-start-production grammar)))
