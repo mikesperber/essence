@@ -126,8 +126,10 @@
 			   (next-terminals closure grammar))
 	 => (lambda (symbol)
 	      (let ((attribute-value (cdr (stream-car *input*))))
-		(set! *input* (stream-cdr *input*))
-		(set! *error-status* (move-error-status *error-status*))
+		(_memo
+		 (begin
+		   (set! *input* (stream-cdr *input*))
+		   (set! *error-status* (move-error-status *error-status*))))
 		(shift symbol attribute-value
 		       handle-error))))
 	((find-lookahead-item accept-items k *input*) => reduce)
