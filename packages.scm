@@ -50,7 +50,7 @@
   (files (common stream)))
 
 (define-structure grammar grammar-interface
-  (open scheme big-scheme)
+  (open scheme big-scheme scc-union)
   (files (common grammar)))
 
 (define-structure scc-union scc-union-interface
