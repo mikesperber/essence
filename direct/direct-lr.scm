@@ -17,21 +17,22 @@
 		 (if (zero? rhs-length)
 		     (parse-bar grammar k first-map closure lhs input)
 		     (parse-result lhs rhs-length input))))
-	     (lambda () 'error))))))
+	     (lambda ()
+	       (error "parse error")))))))
 
 (define (parse-bar grammar k first-map closure symbol input)
   (let* ((next-state (goto closure symbol)))
     (and (not (null? next-state))
 	 (let ((result
 		(parse grammar k first-map next-state input)))
-	   (if (parse-result? result)
+	   (if (final? next-state grammar)
+	       result
 	       (let* ((lhs (result-lhs result))
 		      (dot (result-dot result))
 		      (inp (result-inp result)))
 		 (if (> dot 1)
 		     (parse-result lhs (- dot 1) inp)
-		     (parse-bar grammar k first-map closure lhs inp)))
-	       result)))))
+		     (parse-bar grammar k first-map closure lhs inp))))))))
 
 ;; ~~~~~~~~~~~~
 
