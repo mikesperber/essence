@@ -6,7 +6,7 @@
    (let ((closure (compute-closure state grammar)))
 
      (if (final? state grammar)
-	 (if (equal? eoi-terminal (car input))
+	 (if (equal? (make-eoi-terminal) (car input))
 	     'accept
 	     (_error "parse error"))
 	 (the-trick
