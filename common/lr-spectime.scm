@@ -67,12 +67,11 @@
 	     (nonterminals (cons nonterminal-start (map xlate nonterminals)))
 	     (terminals (map xlate source-terminals)))
 
-	(if (source-grammar-has-terminal-attribution? grammar)
-	    (make-grammar nonterminals terminals productions start
-			  (if (>= (length grammar) 5)
-			      `(lambda (terminal)
-				 ,(source-grammar-terminal-attribution grammar))
-			      #f)))))))
+	(make-grammar nonterminals terminals productions start
+		      (if (source-grammar-has-terminal-attribution? grammar)
+			  `(lambda (terminal)
+			     ,(source-grammar-terminal-attribution grammar))
+			  #f))))))
 
 ;; Grammars
 ;; ~~~~~~~~
