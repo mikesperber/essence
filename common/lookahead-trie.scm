@@ -4,14 +4,15 @@
 				      (cons (item-lookahead item)
 					    item))
 				    item-set))
-	     (k k)
+	     (remaining k)
 	     (input input))
     (cond
      ((null? lookaheads+items)
       #f)
-     ((or (zero? k) (null? (cdr lookaheads+items)))
+     ((or (zero? remaining) (null? (cdr lookaheads+items)))
       (cdar lookaheads+items))
-     ((stream-empty? input)
+     ((and (not (= k remaining))
+	   (stream-empty? input)) ; we covered this previously
       (let ((empties
 	     (filter (lambda (lookahead+item)
 		       (null? (car lookahead+item)))
@@ -22,7 +23,7 @@
      (else
       (loop (filter-lookaheads+items lookaheads+items
 				     (car (stream-car input)))
-	    (- k 1)
+	    (- remaining 1)
 	    (stream-cdr input))))))
 
 (define (filter-lookaheads+items lookaheads+items terminal)
