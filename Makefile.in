@@ -100,7 +100,8 @@ PARSER_ALL_SOURCE_FILES = \
 
 PARSER_DOC_FILES = \
 	COPYING README INSTALL \
-	doc/essence.tex doc/essence.bbl doc/essence.ps doc/html/* \
+	doc/essence.tex doc/essence.bbl doc/essence.ps \
+	doc/html/*.html doc/html/icons/*.xbm \
 	doc/$(RUNNABLE).man
 
 PARSER_EXAMPLE_FILES = \
@@ -172,6 +173,11 @@ install-documentation: documentation
 	for f in *.html; do						\
 		$(INSTALL_DATA) $$f $(htmldir);				\
 	done
+	mkdir -p $(htmldir)/icons &&					\
+	cd doc/html/icons;						\
+	for f in *.xbm; do						\
+		$(INSTALL_DATA) $$f $(htmldir)/icons;			\
+	done
 
 install-directories:
 	mkdir -p $(prefix) &&						\
@@ -209,7 +215,7 @@ pristine: distclean
 	rm -f configure
 	rm -f $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm
 	rm -rf $(GENEXT_DIRECTORY)
-	rm -rf doc/essence.ps doc/essence.bbl doc/essence/html
+	rm -f doc/essence.ps doc/essence.bbl doc/essence/html/*.html
 
 batch: $(BATCH_IMAGE)
 
