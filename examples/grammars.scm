@@ -135,7 +135,10 @@
      ((T P / T) (/ $1 $3))
      ((P n))
      ((P l E r) $2))
-    E))
+    E
+    (if (eq? terminal 'n)
+	42
+	#f)))
 
 (define g10-error-attrib
   '((E T P)
@@ -157,6 +160,7 @@
 
 (define i10-2 '((l . #f) (n . 4) (+ . #f) (n . 15) (n . 17) (r . #f) (* . #f) (n . 7)))
 
+(define i10-3 '((l . #f) (n . 4) (+ . #f) (n . 17) (* . #f) (n . 7)))
 
 (define g11         ; Logical Expressions
   '((F C U L S P)   ; Non terminals
