@@ -1,0 +1,511 @@
+\documentclass{article}
+
+\usepackage{hyperlatex}
+\usepackage{palatino}
+\renewcommand{\ttdefault}{cmtt}
+\usepackage{xspace}
+\usepackage{alltt}
+\W\newenvironment{alltt}{\begin{rawhtml}<p><pre>\end{rawhtml}}{\begin{rawhtml}</pre></p>\end{rawhtml}}
+\usepackage{url}
+\W\newcommand{\url}[1]{\xlink{\texttt{#1}}{#1}}
+
+\newcommand{\essenceversion}{1.0}
+
+\W\newcommand{\langle}{<}
+\W\newcommand{\rangle}{>}
+
+\W\newcommand{\bigskip}{\begin{rawhtml}<p>\end{rawhtml}}
+
+\newcommand{\meta}[1]{{\noindent\mbox{\textrm{$\langle$#1$\rangle$}}}}
+\newcommand{\hyper}[1]{\meta{#1}}
+\newcommand{\hyperi}[1]{\hyper{#1$_1$}}
+\newcommand{\hyperii}[1]{\hyper{#1$_2$}}
+\newcommand{\hyperj}[1]{\hyper{#1$_i$}}
+\newcommand{\hypern}[1]{\hyper{#1$_n$}}
+\renewcommand{\var}[1]{\noindent\mbox{\textit{#1}}}
+\newcommand{\vari}[1]{\var{#1$_1$}}
+\newcommand{\varii}[1]{\var{#1$_2$}}
+\newcommand{\variii}[1]{\var{#1$_3$}}
+\newcommand{\variv}[1]{\var{#1$_4$}}
+\newcommand{\varj}[1]{\var{#1$_j$}}
+\newcommand{\varn}[1]{\var{#1$_n$}}
+
+\W\newcommand{\frenchspacing}{}
+\W\newcommand{\textnormal}[1]{#1}
+
+\newcommand{\defining}[1]{{\emph{#1}}}
+\newcommand{\ide}[1]{{\frenchspacing\textnormal{\texttt{#1}}}}
+
+\newcommand{\exprtype}{syntax}
+
+\W\newcommand{\unskip}{}
+\W\newcommand{\textrm}[1]{#1}
+
+\W\newenvironment{flushleft}{}{}
+\W\newcommand{\hfill}{}
+\W\newcommand{\fill}{}
+\W\newcommand{\linebreak}{\\}
+\W\newcommand{\hspace}[1]{ }
+\W\newcommand{\hspace*}[1]{ }
+
+% Primitive prototype
+\newcommand{\pproto}[2]{\unskip%
+\mbox{\texonly{\spaceskip=0.5em}#1}%
+\mbox{ }\texonly{\nobreak}\htmlonly{ }\textrm{#2}}
+
+% Parenthesized prototype
+\newcommand{\proto}[3]{\par\bigskip\begin{flushleft}\pproto{(\texttt{#1}}{\textit{#2})}\hspace*{\fill}{#3}\end{flushleft}}
+
+% Variable prototype
+\newcommand{\vproto}[2]{\pproto{#1}{#2}}
+
+% Random prototype
+\newcommand{\rproto}[3]{\proto{#1}{#2}{#3}}
+
+\newcommand{\constant}[1]{\texttt{#1}}
+
+\newcommand{\dotsfoo}{\ldots\texonly{\thinspace}}
+
+\newcommand{\codefont}[1]{\texttt{#1}}
+
+\T\newcommand{\filename}[1]{\url{#1}}
+\W\newcommand{\filename}[1]{\texttt{#1}}
+
+\htmltitle{Essence---An LR Parser Generator for Scheme}
+\htmldirectory{html}
+\htmladdress{\begin{rawhtml}<a href="http://www-pu.informatik.uni-tuebingen.de/users/sperber/">Mike
+  Sperber</a>, <a
+  href="http://www.informatik.uni-freiburg.de/~thiemann/">Peter Thiemann</a>\end{rawhtml}}
+
+\title{Essence---An LR Parser Generator for Scheme\\
+  \normalsize{Version \essenceversion}}
+\author{\xlink{Mike Sperber}{http://www-pu.informatik.uni-tuebingen.de/users/sperber/}\\\xlink{\texttt{sperber@informatik.uni-tuebingen.de}}{mailto:sperber@informatik.uni-tuebingen.de}\\
+  \xlink{Peter
+    Thiemann}{http://www.informatik.uni-freiburg.de/\%7ethiemann/}\\\xlink{\texttt{thiemann@informatik.uni-freiburg.de}}{mailto:thiemann@informatik.uni-freiburg.de}
+  }
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  \noindent
+  Essence is a generator for LR(k) and SLR(k) parsers in Scheme.  The
+  generated parsers perform error recovery, and are highly efficient.
+  Testing and debugging a parser does not require an
+  edit---generate---compile---test cycle.  Rather, the parser
+  generator results from a general parser which takes the input
+  grammar as a parameter; no generation and recompilation is necessary
+  to try out changes to a grammar.  The generated parsers result from
+  the general parser by an automatic program transformation called
+  \emph{partial
+    evaluation}~\cite{SperberThiemann1995-pepm,SperberThiemann1999-toplas}.
+  This guarantees consistency and ensures correctness.  However, no
+  specific knowledge of partial evaluation is required to use Essence.
+\end{abstract}
+%
+This document assumes basic knowledge about the basics S-attributed
+grammars and LR parsing, available in almost any serious compiler
+construction
+textbook~\cite{Chapman1987,SippuSoisalon-Soininen1990,AhoSethiUllman1986,WilhelmMaurer1995}.
+It may also be helpful to study the documentation of more traditional
+parser generation packages such as Yacc~\cite{Johnson1975} or
+Bison~\cite{DonnellyStallman1995}.
+
+\section{Introduction}
+\label{sec:introduction}
+
+The pragmatics of using Essence are slightly different from that of
+using other parser or parser generation packages.
+
+At the heart of parsing is, as usual, a context-free grammar.  Essence
+provides a new syntactic form
+\link{\codefont{define-grammar}}{form:define-grammar} which embeds a
+language for attributed context-free grammars into Scheme.  This is
+different from other parser generation packages which either represent 
+a context-free grammar as an S-expression object or in some special
+syntax in a special file.
+
+Given a grammar, parsing can proceed in one of two modes:
+%
+\begin{itemize}
+\item A general \codefont{parse} procedure will accept a grammar, a
+  parsing method (SLR or LR), a lookahead size, and an input, and
+  produce the result of parsing and attribute evaluation.  This mode
+  of operation allows instant turnaround, but also parses very
+  slowly.  It is good for incremental development, but impractical for
+  production parsers.
+\item A parser generator (automatically generated from the
+  implementation of \codefont{parse}) produces a specialized parser
+  from a grammar, a parsing method, and a lookahead.  The specialized
+  parser only accepts an input as an argument, but is otherwise
+  identical in operation to the general parser.  It is highly
+  efficient, and therefore good for production use.
+\end{itemize}
+
+\section{Prerequisites}
+\label{sec:preliminaries}
+
+Currently, Essence itself only runs under
+Scheme~48~\cite{KelseyRees1995}.  However, the generated parsers run
+under any R$^5$RS~\cite{KelseyClingerRees1998} Scheme.  Moreover, the
+dependencies on non-standard features of Scheme which Essence uses
+have been carefully factored out with the help of the Scheme~48 module
+system; making it work in any given Scheme implementation is not hard.
+
+The Essence distribution contains three files to be loaded into
+Scheme~48's configuration package: \filename{interfaces.scm},
+\filename{packages.scm}, and \filename{generator-packages.scm}.  To
+make Essence available within Scheme~48, it is always necessary to
+load \filename{interfaces.scm} (via \codefont{,config ,load
+  interfaces.scm}).  To run the generic parsers, it is necessary to
+also load \filename{packages.scm}, to use the parser generator,
+\filename{generator-packages.scm}.
+
+\section{Grammars}
+\label{sec:grammars}
+
+Context-free grammars are at the heart of parser generation.  Essence
+allows specifying so-called \emph{S-attributed grammars} with
+evaluation rules for synthesized attributes.  The assumption is that
+each node in the parse tree carries an instance of exactly one
+synthesized attribute, and an Essence grammar provides an attribution
+along with production to describe how to compute it.
+
+The structure \codefont{grammar} provides a defining form for
+grammars.  (It also provides numerous accessors and algorithms over
+grammars.  However, these are not relevant for using Essence.)
+
+An Essence grammar consists of two data objects: a representation of
+the grammar itself, and an enumeration (see \filename{doc/big-scheme.txt}
+in the Scheme~48 distribution for a description of the enumeration
+facility in Scheme~48) which is needed to symbolically encode the
+input to the parser.  The \codefont{define-grammar} from the
+\codefont{grammar} structure form defines both:
+
+\label{form:define-grammar}
+\proto{define-grammar}{ \meta{variable$_1$} \meta{variable$_2$}\hfill\linebreak\texonly{\hspace*{1em}}
+    \meta{nonterminals} \meta{terminals}
+  \meta{start-symbol} \meta{rules}}{syntax}
+
+\paragraph{Syntax:} \meta{Nonterminals} has the
+form
+%
+\begin{alltt}
+  (\meta{nonterminal} \dotsfoo)
+\end{alltt}
+%
+where each \meta{nonterminal} is an \meta{identifier}.  \meta{Terminals} is
+similarly of the form
+%
+\begin{alltt}
+  (\meta{terminal} \dotsfoo)
+\end{alltt}
+%
+with \meta{terminal} an \meta{identifier}.  \meta{Terminal} and
+\meta{nonterminal} must be disjoint.  \meta{Start-symbol} must
+be a \meta{nonterminal}.  \meta{Rules} has the form:
+%
+\begin{alltt}
+  (\meta{rule} \dotsfoo)
+\end{alltt}
+%
+where each indivial \meta{rule} has the form
+%
+\begin{alltt}
+  ((\meta{nonterminal} \meta{grammar-symbol} \dotsfoo) \meta{attribution})
+\end{alltt}
+%
+where each \meta{grammar-symbol} is either a \meta{nonterminal}, a
+\meta{terminal}, or \codefont{\$error}.  (The latter is for directing
+\link{error recovery}[ (see
+Sec.~\ref{sec:error-recovery})]{sec:error-recovery} \meta{Attribution}
+is a Scheme expression.
+
+\paragraph{Semantics:} \codefont{Define-grammar} defines a
+context-free grammar along with an enumeration type for its symbols.
+\codefont{Define-grammar} binds a data object representing the grammar 
+to its first argument, and an enumeration type for its symbols to its
+second argument.
+
+The third argument to \codefont{define-grammar} is a list of
+nonterminals, the fourth a list of terminals.  The fifth argument is
+the start symbol (which must be one of the nonterminals), then comes a
+list of the grammar rules.
+
+A grammar rules consist of a production---a list with a nonterminal as
+its first element, and the right-hand side as its rest---and an
+attribution.
+
+The attribution is a Scheme expression, which may have free variables
+\codefont{\$}$i$, where $i$ ranges from $1$ to the number of symbols
+on the right-hand side of the production.  During parsing, the Essence
+parser binds \codefont{\$}$i$ to the attribute instance of the $i$th
+symbol on the right-hand-side when evaluating the attribution.
+
+Here is a simple example grammar for arithmetic expressions:
+%
+\begin{verbatim}
+(define-grammar g10 g10-symbol
+  (E T P)
+  (+ - * / l r n)
+  E
+  (((E T) $1)
+   ((E T + E) (+ $1 $3))
+   ((E T - E) (- $1 $3))
+   ((T P) $1)
+   ((T P * T) (* $1 $3))
+   ((T P / T) (/ $1 $3))
+   ((P n) $1)
+   ((P l E r) $2)))
+\end{verbatim}
+%
+This definition establishes an enumeration type \codefont{g10-symbol}
+with components (in that order):
+%
+\label{list:grammar-enum}
+%
+\begin{itemize}
+\item \codefont{\$Start} (for the fresh start symbol generated by
+  \codefont{define-grammar}),
+\item the nonterminals in the same order as in the
+  \codefont{define-grammar} form,
+\item \codefont{\$Error}, and
+\item the terminals in the same order as the \codefont{define-grammar}
+  form.
+\end{itemize}
+
+\section{Running a Parser}
+\label{sec:running-a-parser}
+
+Parsing with respect to a grammar does not require generating a
+specialized parser along with the associated overhead of compiling and
+loading.  Essence provides general parsers which accept a grammar as
+input and parse ``right away.''  This allows incremental debugging and 
+development of attributed grammars to be used with Essence.
+
+Essence actually comes with a number of different implementations of
+LR parsing.  The \filename{packages.scm} configuration file contains
+definitions for a range of structures all with the interface
+\codefont{parser-interface}.  The one intended for production use is in the
+\codefont{cps-lr} structure whose implementation resides in
+\filename{cps/cps-lr.scm}.  \codefont{Parser-interface} describes only 
+one binding called \codefont{parse}:
+
+\label{proc:parse}
+\proto{parse}{grammar lookahead method input}{procedure}
+%
+\begin{itemize}
+\item \var{Grammar} is a grammar defined by \codefont{define-grammar}.
+\item \var{Lookahead} is a non-negative integer denoting the
+  lookahead the parser uses.
+\item \var{Method} is a symbol, either \codefont{lr} or
+  \codefont{slr}, specifying the parsing method used---either full LR
+  parsing or SLR parsing.
+\item \var{Input} is a \link{stream}{sec:streams} (as per the
+  \codefont{stream} structure) consisting of enumerands of the
+  terminals of \var{grammar}.  It is the actual input to the parser.
+  
+  Note that this is a stream of \emph{numbers}.  These are easiest
+  generated via the \codefont{enumerated} structure of Scheme~48.  In
+  the absence of an implementation of \codefont{grammar} and
+  \codefont{enumerated}, the \link{list of components}[ in the
+  previous section]{list:grammar-enum} describes the mapping between
+  grammar symbols and enumerands; the enumerands are 0-based.
+\end{itemize}
+%
+\ide{Parse} returns the result of attribute evaluation on the parse
+tree induced by \var{input}.  This is ultimately the result of the
+attribution associated with the start production.
+
+If the grammar contains productions containing \codefont{\$error}
+symbols, the parser will attempt \link{error recovery}[ (see
+Sec.~\ref{sec:error-recovery})]{sec:error-recovery} when possible.
+
+Parsing is not reentrant.  (Actually, the \codefont{cps-attrib-error}
+structure implemented by \filename{cps/cps-attrib-error.scm} does
+implement reentrant parsing.  The parser generator does not currently
+use it, however.)
+
+\section{Generating a Specialized Parser}
+\label{sec:parser-generation}
+
+In addition to simply calling \codefont{parse}, Essence also allows
+the generation of highly efficient specialized parsers with respect to
+a grammar, lookahead, and parsing method.  Essence offers a (Unix)
+batch version of the parser generator, as well as a Scheme~48 package
+which allows access from within a REPL.
+
+In order to run, specialized parsers require an implementation of
+\link{streams}[ (see Sec.~\ref{sec:streams})]{sec:streams} as well as
+an \codefont{error} procedure which accepts one argument, an error
+message.  The specialized parser will call \codefont{error} when an
+unrecoverable error occurs.
+
+\paragraph{Batch operation}
+Installation of Essence creates a binary called \filename{essence}.
+When called with a \codefont{--help} or \codefont{-h} argument, it
+prints a synopsis of its syntax:
+%
+\begin{verbatim}
+essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
+        ( -m method | --method=method )
+        ( -l lookahead | -lookahead=lookahead )
+        input-file grammar-name output-file
+\end{verbatim}
+%
+\begin{itemize}
+\item \texttt{Input-file} is a Scheme source file which Essence will
+  load into a package with the standard R$^5$RS Scheme bindings as
+  well as \link{\codefont{define-grammar}}{form:define-grammar}.  The
+  file must contain the definition for at least one grammar.
+\item \texttt{Grammar-name} is the name of the grammar defined in
+  \texttt{input-file} for which Essence is to generate a specialized
+  parser.
+\item \texttt{Output-file} is the name of the file into which Essence
+  writes the specialized parser.
+\item \texttt{Goal-proc} is the name of entry procedure into the
+  specialized parser.  It will accept just one argument, an input
+  stream.
+\item \texttt{Method} is the parsing method, either \texttt{slr} or
+  \texttt{lr}.  The default is \texttt{slr}.
+\item \texttt{Lookahead} is the lookahead size, a non-negative
+  number.  The default is \texttt{1}.
+\end{itemize}
+
+\paragraph{REPL operation}
+The \filename{generator-packages.scm} configuration file defines a
+structure \codefont{cps-lr-generate} which offers a procedure that
+generates specialized parsers:
+
+\proto{generate-parser}{grammar lookahead method goal-name}{procedure}
+%
+\var{Grammar}, \var{lookahead}, and \var{method} are as with
+\link{\codefont{parse}}{proc:parse}.
+
+The \var{goal-name} argument to \ide{generate-parser} is a symbol
+which names the entry procedure into the parser.
+\ide{Generate-parser} generates a list of S-expressions which, when
+written out sequentially, represent the code of the specialized
+parser.
+
+\section{Implementing Input Streams}
+\label{sec:streams}
+
+Essence parsers rely on \textit{streams} to implement sequences of
+input terminals.  The parsers only use three accessor procedures which 
+may be implemented in any number of ways.  (One possible
+implementation is to just use lists.)  Essence comes with an
+implementation of lazy streams as well which includes stream creation
+procedures as well.
+
+\paragraph{Streams interface}
+\label{sec:streams-accessors}
+
+The part of the streams interface relevant to Essence parsers contains 
+only accessors:
+
+\proto{stream-car}{stream}{procedure}
+%
+\ide{Stream-car} returns the first element of a non-empty stream.
+
+\proto{stream-cdr}{stream}{procedure}
+%
+\ide{Stream-cdr}, when applied to a non-empty stream \var{stream},
+returns a new stream with the same elements as \var{stream} sans the
+first one.
+
+\proto{Stream-empty?}{stream}{procedure}
+%
+\ide{Stream-empty?} returns \codefont{\#t} when applied to an empty
+stream, and \codefont{\#t} when applied to a non-emtpy stream.
+
+\paragraph{The \codefont{stream} structure}
+A portable example implementation of (lazy) streams is in the Essence
+distribution as \filename{common/stream.scm}.  It is also the
+implementation of the Scheme~48 structure \codefont{stream} defined in
+\filename{packages.scm}.  Aside from the accessors described
+\link{above}{sec:streams-accessors}, it also provides a creation
+procedure and procedure for converting to and from lists:
+
+\proto{make-stream}{state-transformer state}{procedure}
+%
+\ide{Make-stream} creates a stream with initial stream state
+\var{state} and state transformer \var{state-transformer}.  A stream
+state represents a state in unrolling the stream---as such it encodes
+the ability to produce the elements of the stream.
+\var{State-transformer} must accept a state as an argument and return
+a pair consisting of the first element of the stream as
+\codefont{car}, and a new state as \codefont{cdr}.
+
+The accessor procedures only ever call \var{state-transformer} in a
+single-threaded manner---they will apply it to \var{state} upon
+access, and they will apply it only once.  After that, they will apply 
+it once to the state returned by \var{state-transformer}, and so on.
+
+\proto{list->stream}{list}{procedure}
+%
+\ide{List->stream} produces a stream with exactly the elements of
+\var{list}.
+
+\proto{stream->list}{stream}{procedure}
+%
+\ide{Stream->list} produces a list with exactly the elements of
+\var{stream}.  \var{Stream} must be finite.
+
+\section{Error Recovery}
+\label{sec:error-recovery}
+
+Essence parsers can perform recovery from parsing errors in the manner
+of Yacc~\cite{Johnson1975} and Bison~\cite{DonnellyStallman1995}.  The
+basic idea is that the author of a grammar can specify special
+error productions at critical places in a grammar designed to ``catch''
+parsing errors.  This allows printing specially tailored error
+messages as well as some control over attribute evaluation in such a
+case.
+
+Error productions contain a special grammar symbol \codefont{\$error}
+on the right-hand side.  (\codefont{\$Error} must not be explicitly
+declared as a terminal or nonterminal in the \codefont{define-grammar}
+form.)
+
+When an error occurs during parsing, an Essence parser pretends that
+it has just seen \codefont{\$error} in the input.  It will go back to
+the last LR state capable of accepting \codefont{\$error} as the next
+symbol in the input.  Moreover, it discards terminals from the input
+until the next input terminal is acceptable as the next input symbol
+\emph{after} it has consumed \codefont{\$error}.  Subsequently, the
+parser resumes work as usual.
+
+To prevent excessive avalanching of error messages, the parser makes
+sure that it consumes at least three input terminals after an
+attempted error recovery until it attempts recovery again.
+
+Here is an example for the constant arithmetic expressions grammar
+guaranteed to catch all errors:
+%
+\begin{verbatim}
+(define-grammar g10-error g10-error-symbol
+  (E T P)
+  (+ - * / l r n)
+  E
+  (((E T) $1)
+   ((E $error) 0)
+   ((E T + E) (+ $1 $3))
+   ((E T - E) (- $1 $3))
+   ((T P) $1)
+   ((T P * T) (* $1 $3))
+   ((T P / T) (/ $1 $3))
+   ((P n) $1)
+   ((P l E r) $2)
+   ((P l $error r) 0)))
+\end{verbatim}
+%
+Apart from the first catch-all rule containing \codefont{\$error}, the
+parser will also, when encountering an error inside a parenthesized
+expression, skip until the next closing parenthesis to resume parsing.
+
+
+\bibliographystyle{plain} 
+\bibliography{abbrevs,papers,books,theses,misc,collections}
+\end{document}

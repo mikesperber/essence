@@ -28,6 +28,9 @@ MINOR_VERSION_NUMBER = 0
 TAR = tar
 ZCAT = zcat
 GZIP = gzip
+LATEX = latex
+BIBTEX = bibtex
+HYPERLATEX = hyperlatex
 SCHEME48 = scheme48
 
 PGG_DIRECTORY = ../cps-mcogen
@@ -94,7 +97,8 @@ PARSER_ALL_SOURCE_FILES = \
 	$(GENEXT_DIRECTORY)/*
 
 PARSER_DOC_FILES = \
-	COPYING README INSTALL MANIFEST
+	COPYING README INSTALL MANIFEST \
+	doc/essence.tex doc/essence.bbl doc/essence.ps doc/html/*
 
 PARSER_EXAMPLE_FILES = \
 	examples/toy-grammars.scm \
@@ -180,6 +184,7 @@ config.status: configure
 clean:
 	rm -f $(BATCH_IMAGE) $(IMAGE)
 	rm -f $(RUNNABLE)
+	rm -f doc/*.aux doc/*.dvi -f doc/*.log
 
 distclean: clean
 	rm -f Makefile
@@ -189,6 +194,7 @@ pristine: distclean
 	rm -f configure
 	rm -f $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm
 	rm -rf $(GENEXT_DIRECTORY)
+	rm -rf doc/essence.ps doc/essence/html
 
 batch: $(BATCH_IMAGE)
 
@@ -274,6 +280,18 @@ $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm: \
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(PGG_HEAPSIZE)
 
+doc/essence.bbl:
+	cd doc; $(LATEX) essence; $(BIBTEX) essence
+
+doc/essence.dvi: doc/essence.tex doc/essence.bbl
+	cd doc; $(LATEX) essence; $(LATEX) essence
+
+doc/essence.ps: doc/essence.dvi
+	cd doc; dvips essence
+
+doc/html/essence.html: doc/essence.tex
+	cd doc; $(HYPERLATEX) essence
+
 import-genext:
 	rm -rf $(GENEXT_DIRECTORY)
 	cd $(PGG_DIRECTORY) &&						\
@@ -286,7 +304,8 @@ distname = $(RUNNABLE)-1.$(MINOR_VERSION_NUMBER)
 
 dist: import-genext \
 	configure Makefile \
-	$(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm
+	$(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm \
+	doc/essence.ps doc/html/essence.html
 	distname=$(distname) &&						\
 	distfile=$(distdir)/$$distname.tar.gz &&			\
 	if [ -d $(distdir) ] &&						\
