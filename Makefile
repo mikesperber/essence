@@ -1,6 +1,6 @@
 include Makefile.config
 
-.PHONY: cps direct examples common benchmarks
+.PHONY: cps direct examples common benchmarks dist
 
 direct:
 	cd direct; $(MAKE)
@@ -27,3 +27,9 @@ gambit_examples: gambit_examples_direct
 gambit_examples_direct: direct
 	cd examples; $(MAKE) gambit_examples
 
+dist:
+	-mkdir -p pgg
+	cp $(PGGDIR)/cogen-interfaces.scm \
+	   $(PGGDIR)/cogen-ctors.scm \
+	   $(PGGDIR)/cogen-directives.scm \
+	pgg
