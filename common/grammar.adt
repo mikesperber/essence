@@ -28,25 +28,31 @@
       '()
       (cons '$ (make-$ (- n 1)))))
 
+;;; note: terminals cannot be numbers!!!
 (defprim (source-grammar->grammar grammar k)
   (let ((nonterminals (car grammar))
 	(terminals (list-ref grammar 1))
 	(rules (list-ref grammar 2))
 	(start (list-ref grammar 3)))
 
-    (let ((productions
-	   (let loop ((i 0)
+    (let* ((nts (cons 'yummy-yummy nonterminals))
+	   (xlate (lambda (symbol)
+		    (or (list-position symbol nts) symbol)))
+	   (productions
+	    (let loop ((i 0)
 		      (rules (cons `((yummy-yummy ,start ,@(make-$ k)))
 				   rules)))
 	     (if (null? rules)
 		 '()
 		 (let* ((rule (car rules))
 			(production (rule-production rule))
-			(lhs (car production))
-			(rhs (cdr production))
+			(lhs (xlate (car production)))
+			(rhs (map xlate (cdr production)))
 			(attribution (rule-make-attribution rule)))
 		   (cons (vector i lhs rhs attribution)
-			 (loop (+ i 1) (cdr rules))))))))
+			 (loop (+ i 1) (cdr rules)))))))
+	   (nonterminals (map xlate nonterminals))
+	   (start (xlate start)))
 
       (vector nonterminals terminals productions start))))
 
@@ -75,6 +81,21 @@
            (loop (cdr l) (cons (car l) yes) no))
           (else
            (loop (cdr l) yes (cons (car l) no))))))
+
+(defprim (list-position x l)
+  (let loop ((i 0) (l l))
+    (if (null? l)
+	#f
+	(if (equal? (car l) x)
+	    i
+	    (loop (+ i 1) (cdr l))))))
+
+(defprim (take n l)
+    (cond
+     ((or (zero? n) (null? l))
+      '())
+     (else
+      (cons (car l) (take (- n 1) (cdr l))))))
 
 ;;; trie of depth k: k nested alists
 ;;; needs at least one item
@@ -176,6 +197,10 @@
 (defprim (nonterminal? sym grammar)
   (not (terminal? sym grammar)))
 
+;;; assumes terminals are symbols
+(defprim (terminal<=? x y)
+  (string<=? (symbol->string x) (symbol->string y)))
+
 ; ---
 
 (defprim (symbols->string p)
@@ -187,11 +212,25 @@
 	       (symbol->string (car l)))
 	      (cdr l)))))
 
+(defprim (symbols/numbers->string p)
+  (let loop ((s "") (l p))
+    (if (null? l)
+	s
+	(loop (string-append
+	       (string-append s " ")
+	       (let ((x (car l)))
+		 (cond
+		  ((symbol? x)
+		   (symbol->string x))
+		  ((number? x)
+		   (number->string x)))))
+	      (cdr l)))))
+
 (defprim (production<? p1 p2)
-  (string<? (symbols->string (cons (production-lhs p1)
-				   (production-rhs p1)))
-	    (symbols->string (cons (production-lhs p2)
-				   (production-rhs p2)))))
+  (string<? (symbols/numbers->string (cons (production-lhs p1)
+					   (production-rhs p1)))
+	    (symbols/numbers->string (cons (production-lhs p2)
+					   (production-rhs p2)))))
 
 ; LR items
 ; ========
@@ -238,6 +277,12 @@
 		  
 (defprim (sort-items item-set)
   (sort-generic item<? item-set))
+
+(defprim (sort-nonterminals xs)
+  (sort-generic <= xs))
+
+(defprim (sort-terminals xs)
+  (sort-generic terminal<=? xs))
 
 (defprim (sort-generic leq? xs)
   (letrec
@@ -370,10 +415,18 @@
     (if (null? item-set)
 	#f
 	(let ((item (car item-set)))
-	  (or (and (equal? (item-lhs item)
-			   'yummy-yummy)
+	  (or (and (zero? (item-lhs item))
 		   (= 1 (item-position item)))
 	      (loop (cdr item-set)))))))
+
+(defprim (add-slr-lookahead item-set follow-map)
+  (let ((add-one-slr-lookahead
+	 (lambda (item)
+	   (let ((production (item-production item)))
+	     (map (lambda (la)
+		    (make-item production (item-position item) la))
+		  (cdr (assoc (production-lhs production) follow-map)))))))
+    (apply append (map add-one-slr-lookahead item-set))))
 
 ; First set computation
 ; =====================
@@ -494,7 +547,7 @@
 
 (defprim (initial-follow-map grammar)
   ;start symbol must be followed by the empty string to get of the ground
-    (cons (cons 'yummy-yummy '(()))
+    (cons (cons 0 '(()))
 	  (map (lambda (nt) (cons nt '()))
 	       (grammar-nonterminals grammar))))
 
