@@ -6,10 +6,11 @@
 
 (define (complete-subsets! for-each-a a-equal? for-each-R
 			   associate-depth! depth-association
-			   merge!)
+			   overwrite! merge!)
   (let ((stack '())
 	(depth 0))
 
+    ;; #f means infinity
     (define (depth-min a b)
       (cond ((not a) b)
 	    ((not b) a)
@@ -24,18 +25,17 @@
 	 (lambda (b)
 	   (if (eqv? 0 (depth-association b)) ; can't use zero? 'cause it may be #f
 	       (descend! b))
-	   (associate-depth!
-	    a
-	    (depth-min (depth-association a)
-		       (depth-association b)))
-	 
+	   (associate-depth! a
+			     (depth-min (depth-association a)
+					(depth-association b)))
 	   (merge! a b))
 	 a)
       
 	(if (= (depth-association a) depth)
 	    (let loop ()
-	      (associate-depth! (car stack) #f)
 	      (let ((top (car stack)))
+		(associate-depth! top #f)
+		(overwrite! top a)
 		(set! stack (cdr stack))
 		(if (not (a-equal? top a))
 		    (loop)))))))
