@@ -108,23 +108,7 @@
     S           ; Start symbol
     ))
 
-(define g10         ; Arithmetic Expressions
-  '((E T P)         ; Non terminals
-    (+ - * / n l r) ; Terminals
-    (               ; Productions
-     (E T)          ; E -> T
-     (E T + E)      ; E -> T + E
-     (E T - E)      ; E -> T - E
-     (T P)          ; T -> P
-     (T P * T)      ; T -> P * T
-     (T P / T)      ; T -> P / T
-     (P n)          ; P -> n
-     (P l E r)      ; P -> l E r
-     )
-    E               ; Start symbol
-  ))
-
-(define g10-attrib
+(define g10
   '((E T P)
     (+ - * / l r n)
     (((E T)) ; trivial copying rule
