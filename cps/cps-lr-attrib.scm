@@ -6,6 +6,7 @@
   (c-nil))
 
 (define-memo _memo 1)
+(define-primitive error - error)
 
 (define
   (cps-parse grammar k compute-closure state
@@ -104,6 +105,8 @@
     (if (c-nil? l)
 	r
 	(loop (c-cdr l) (c-cons (c-car l) r)))))
+
+(define-primitive apply - apply)
 
 (define (apply-attribution a l)
   (apply (eval a (interaction-environment)) l))
