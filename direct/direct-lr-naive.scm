@@ -2,8 +2,7 @@
 ;; ===================================
 
 (define (ds-parse grammar k compute-closure state input)
-  (let ((closure (compute-closure state)))
-
+  (let ((closure (compute-closure state grammar k)))
     (cond
      ((and (not (stream-empty? input))
 	   (member (car (stream-car input))
@@ -21,7 +20,7 @@
      (else (error "parse error")))))
 
 (define (ds-parse-bar grammar k compute-closure state symbol input)
-  (let ((closure (compute-closure state)))
+  (let ((closure (compute-closure state grammar k)))
     (call-with-values
      (lambda ()
        (ds-parse grammar k compute-closure
@@ -41,7 +40,7 @@
 
 (define (parse grammar k input)
   (ds-parse grammar k
-	    (lambda (state)
+	    (lambda (state grammar k)
 	      (compute-lr-closure state grammar k))
 	    (list (make-item (grammar-start-production grammar) 0 '()))
 	    input))
