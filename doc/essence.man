@@ -1,0 +1,67 @@
+.de FN
+\fI\|\\$1\|\fP
+..
+.TH essence 1 "1999 Feb 25" Essence
+.SH NAME
+Essence \- an LR Parser Generator for Scheme
+.SH SYNOPSIS
+.B Essence
+essence ( --help | -h )
+
+essence ( -g goal-proc | --goal-proc=goal-proc
+        | --goal-procedure=goal-proc )
+        ( -m method | --method=method )
+        ( -l lookahead | -lookahead=lookahead )
+        input-file grammar-name output-file
+.SH DESCRIPTION
+.I Essence
+is an parser generator capable of generating LR(k) and SLR(k) parsers.
+.B essence
+is a shell script that invokes Scheme 48 on a dumped image that
+contains a batch version of Essence.
+.PP
+.B essence
+reads a Scheme source file 
+.IR input-file
+with grammar definitions and produces an
+output file
+.IR output-file
+with the parser generated from the grammar named
+.IR grammar-name.
+For more information, see the documentation in the
+.I Essence
+distribution under
+.IR doc/essence.ps
+or
+.IR doc/html/essence.html
+.
+.PP
+.IP "-h --help"
+Display synopsis of
+.I Essence
+usage.
+.PP
+.IP "-g \fIgoal-procedure\fP --goal-proc=\fIgoal-procedure\fP"
+.IP "--goal-procedure=\fIgoal-procedure\fP"
+Specify the name of the goal procedure.  The default is
+.IR parse.
+.PP
+.IP "-m \fImethod\fP --method=\fImethod\fP"
+Specify the parsing method, either
+.IR slr
+or
+.IR lr.
+The default is
+.IR slr.
+.PP
+.IP "-l \fIlookahead\fP --lookahead=\fIlookahead\fP"
+Specify the lookahead size.  The default is 1.
+
+.SH "SEE ALSO"
+.IR bison(1)
+.IR yacc(1)
+
+.SH AUTHORS
+.PP
+Mike Sperber <sperber@informatik.uni-tuebingen.de> and Peter Thiemann
+<thiemann@informatik.uni-freiburg.de> are the authors of Essence.

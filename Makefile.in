@@ -17,7 +17,9 @@ libdir = $(exec_prefix)/lib
 sharedir = $(prefix)/share
 incdir = $(prefix)/include
 docdir = $(prefix)/doc
+manext = 1
 mandir = $(prefix)/man/man$(manext)
+htmldir = $(prefix)/html
 
 TEMPDIR = /tmp
 distdir = /tmp
@@ -98,7 +100,8 @@ PARSER_ALL_SOURCE_FILES = \
 
 PARSER_DOC_FILES = \
 	COPYING README INSTALL MANIFEST \
-	doc/essence.tex doc/essence.bbl doc/essence.ps doc/html/*
+	doc/essence.tex doc/essence.bbl doc/essence.ps doc/html/* \
+	doc/$(RUNNABLE).man
 
 PARSER_EXAMPLE_FILES = \
 	examples/toy-grammars.scm \
@@ -134,7 +137,8 @@ BATCH_IMAGE = essence-batch.image
 
 default: batch
 
-install: install-directories install-script install-share install-images
+install: install-directories install-script install-share install-images \
+	install-documentation
 
 install-images: install-image install-batch
 
@@ -161,12 +165,23 @@ $(RUNNABLE): batch
 	     >>$$script &&						\
 	chmod +x $$script
 
+install-documentation: doc/essence.ps doc/html/essence.html
+	$(INSTALL_DATA) doc/$(RUNNABLE).man $(mandir)/$(RUNNABLE).$(manext)
+	$(INSTALL_DATA) doc/essence.ps $(docdir)
+	cd doc/html; 							\
+	for f in *.html; do						\
+		$(INSTALL_DATA) $$f $(htmldir);				\
+	done
+
 install-directories:
 	mkdir -p $(prefix) &&						\
 	mkdir -p $(exec_prefix) &&					\
 	mkdir -p $(bindir) &&						\
 	mkdir -p $(libdir) &&						\
 	mkdir -p $(sharedir) &&						\
+	mkdir -p $(mandir) &&						\
+	mkdir -p $(docdir) &&						\
+	mkdir -p $(htmldir) &&						\
 	for f in $(PARSER_SHARE_DIRECTORIES); do			\
 		mkdir -p $(sharedir)/$$f || exit 1;			\
 	done &&								\
