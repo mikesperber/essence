@@ -1,22 +1,22 @@
 ;; Essential LR parsing (continuation-based)
 ;; =========================================
 
-(define (cps-parse grammar k first-map
+(define (cps-parse grammar k compute-closure
 		   state continuations input)
-  (let ((closure
-	 (compute-lr-closure state grammar k first-map)))
+  (let ((closure (compute-closure state)))
 
     (define (c0 symbol input)
       (cond
        ((not (and (initial? state grammar)
 		  (equal? (grammar-start grammar) symbol)))
-	(cps-parse grammar k first-map
+	(cps-parse grammar k compute-closure
 		   (goto closure symbol)
 		   (cons c0
 			 (take (- (active (goto closure symbol)) 1)
 			       continuations))
 		   input))
-       (else 'accept)))
+       ((stream-empty? input) 'accept)
+       (else 'error)))
 
     (cond
      ((and (not (stream-empty? input))
@@ -31,11 +31,13 @@
      (else 'error))))
 
 (define (parse grammar k input)
-  (cps-parse
-   grammar k (compute-first grammar k)
-   (list (make-item (grammar-start-production grammar) 0 '()))
-   '()
-   input))
+  (let ((first-map (compute-first grammar k)))
+    (cps-parse grammar k 
+	       (lambda (state)
+		 (compute-lr-closure state grammar k first-map))
+	       (list (make-item (grammar-start-production grammar) 0 '()))
+	       '()
+	       input)))
 
 (define (take n l)
   (if (zero? n)
