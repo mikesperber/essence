@@ -5,10 +5,15 @@
   (c-cons c-car c-cdr)
   (c-nil))
 
+(define-primitive (dynamize -) - dynamic)
+(define (generalize x)
+  (if #t x (dynamize x)))
+
 (define (parse grammar k first-map state continuations input)
-  (if (and (final? state grammar)
-           (equal? '$ (car input)))
-      'accept
+  (if (final? state grammar)
+      (if (equal? '$ (car input))
+	  'accept
+	  'error)
       (let ((closure (compute-closure state grammar k first-map)))
 
 	(define (shift-nonterminal nonterminal input)
@@ -18,7 +23,7 @@
 	     (let ((next-state (goto closure symbol)))
 	       (parse grammar k first-map
 		      next-state
-		      (c-cons shift-nonterminal
+		      (c-cons (generalize shift-nonterminal)
 			      (c-take (- (active next-state) 1)
 				      continuations))
 		      input)))))
@@ -30,7 +35,7 @@
 	     (let ((next-state (goto closure symbol)))
 	       (parse grammar k first-map
 		      next-state
-		      (c-cons shift-nonterminal
+		      (c-cons (generalize shift-nonterminal)
 			      (c-take (- (active next-state) 1)
 				      continuations))
 		      input)))
@@ -43,7 +48,8 @@
 	     (select-lookahead-item-the-trick
 	      accept-items k input
 	      (lambda (item)
-		((c-list-ref (c-cons shift-nonterminal continuations)
+		((c-list-ref (c-cons (generalize shift-nonterminal)
+				     continuations)
 			     (length (item-rhs item)))
 		 (item-lhs item) input))
 	      (lambda () 'error))))))))
@@ -74,12 +80,13 @@
 	    (loop (cdr set))))))
 
 (define (the-trick-cannot-fail element set cont)
-  (let loop ((set set))
-    (if (null? (cdr set))
-	(cont (car set))
-	(if (equal? element (car set))
-	    (cont (car set))
-	    (loop (cdr set))))))
+  (and (not (null? set))
+       (let loop ((set set))
+	 (if (null? (cdr set))
+	     (cont (car set))
+	     (if (equal? element (car set))
+		 (cont (car set))
+		 (loop (cdr set)))))))
 
 (define (c-take n l)
   (if (zero? n)
