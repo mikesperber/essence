@@ -6,14 +6,14 @@
       (let* ((middle (- (quotient (+ size 1) 2) 1))
 	     (static-element (list-ref sorted middle)))
 	(cond
-	 ((equal? static-element element)
+	 ((eqv? static-element element)
 	  static-element)
 	 ((< element static-element)
 	  (loop (take middle sorted) middle))
 	 (else
 	  (loop (list-tail sorted (+ middle 1))
 		(- size (+ middle 1)))))))
-     ((equal? element (car sorted))
+     ((eqv? element (car sorted))
       (car sorted))
      (else
       (loop (cdr sorted) (- size 1))))))
@@ -26,14 +26,14 @@
       (let* ((middle (- (quotient (+ size 1) 2) 1))
 	     (static-element (list-ref sorted middle)))
 	(cond
-	 ((equal? static-element element)
+	 ((eqv? static-element element)
 	  static-element)
 	 ((< element static-element)
 	  (loop (take middle sorted) middle))
 	 (else
 	  (loop (list-tail sorted (+ middle 1))
 		(- size (+ middle 1)))))))
-     ((equal? element (car sorted))
+     ((eqv? element (car sorted))
       (car sorted))
      (else
       (loop (cdr sorted) (- size 1))))))

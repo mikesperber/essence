@@ -38,7 +38,7 @@
 	 (matches
 	  (filter
 	   (lambda (lookahead+item)
-	     (equal? static-terminal (caar lookahead+item)))
+	     (eqv? static-terminal (caar lookahead+item)))
 	   non-empties)))
 
     (map (lambda (lookahead+item)

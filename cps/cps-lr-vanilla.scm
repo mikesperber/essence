@@ -27,7 +27,7 @@
      (define (shift-nonterminal nonterminal input)
        (_memo
 	(if (and (initial? state grammar)
-		 (equal? (grammar-start grammar) nonterminal))
+		 (eqv? (grammar-start grammar) nonterminal))
 	    (if (stream-empty? input)
 		'accept
 		'error)
