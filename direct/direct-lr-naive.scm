@@ -17,37 +17,30 @@
 	     (if (zero? rhs-length)
 		 (ds-parse-bar grammar k compute-closure
 			       lhs input)
-		 (parse-result lhs rhs-length input)))))
-     (else (_error "parse error")))))
+		 (values lhs rhs-length input)))))
+     (else (error "parse error")))))
 
 (define (ds-parse-bar grammar k compute-closure state symbol input)
-  (let* ((closure (compute-closure state))
-	 (result (ds-parse grammar k compute-closure
-			   (goto closure symbol) input))
-	 (lhs (result-lhs result))
-	 (dot (result-dot result))
-	 (input (result-input result)))
-
-    (cond
-     ((> dot 1)
-      (parse-result lhs (- dot 1) input))
-     ((and (initial? state grammar)
-	   (equal? (grammar-start grammar) lhs))
-      (if (stream-empty? input)
-	  'accept
-	  (_error "parse error")))
-     (else
-      (ds-parse-bar grammar k compute-closure
-		    state lhs input)))))
-
-(define (parse-result lhs dot inp)
-  (vector lhs dot inp))
-(define (result-lhs result)
-  (vector-ref result 0))
-(define (result-dot result)
-  (vector-ref result 1))
-(define (result-input result)
-  (vector-ref result 2))
+  (let ((closure (compute-closure state)))
+    (if (and (initial? closure grammar)
+	     (equal? (grammar-start grammar) symbol))
+	'accept
+	(call-with-values
+	 (lambda ()
+	   (ds-parse grammar k compute-closure
+		     (goto closure symbol) input))
+	 (lambda (lhs dot input)
+	   (cond
+	    ((> dot 1)
+	     (values lhs (- dot 1) input))
+	    ((and (initial? state grammar)
+		  (equal? (grammar-start grammar) lhs))
+	     (if (stream-empty? input)
+		 'accept
+		 (error "parse error")))
+	    (else
+	     (ds-parse-bar grammar k compute-closure
+			   state lhs input))))))))
 
 (define (parse grammar k input)
   (let ((first-map (compute-first grammar k)))
