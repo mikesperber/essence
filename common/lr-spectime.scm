@@ -134,50 +134,81 @@
 
   (predict state))
 
+(define (sequences-initial-nonterminals sequences grammar)
+  (filter-map
+   (lambda (sequence)
+     (and (not (null? sequence))
+	  (not (terminal? (car sequence) grammar))
+	  (car sequence)))
+   sequences))
+
 (define (compute-slr-closure state grammar k)
 
-  (define (strip-lookaheads items)
-    (map (lambda (item)
-	   (make-item (item-production item)
-		      (item-position item)
-		      #f))
-	 items))
+  (let ((predict-sets (grammar-fetch-property
+		       grammar
+		       'predict-sets
+		       (lambda (grammar)
+			 (make-vector (grammar-number-of-nonterminals grammar)
+				      #f)))))
 
-  (define (initial-items symbol)
-    (map (lambda (production)
-	   (make-item production 0 #f))
-	 (grammar-productions-with-lhs symbol grammar)))
+    (define (compute-predict-lhses lhs already-done)
+      (cond
+       ((and (null? already-done)
+	     (vector-ref predict-sets lhs))
+	=> identity)
+       ((memv lhs already-done)
+	'())
+       (else
+	(let* ((lhses
+		(filter
+		 (lambda (lhs)
+		   (not (memv lhs already-done)))
+		 (sequences-initial-nonterminals
+		  (map production-rhs
+		       (grammar-productions-with-lhs lhs grammar))
+		  grammar)))
+	       (already-done (cons lhs already-done)))
+	  (cons lhs
+		(flatten
+		 (map (lambda (lhs)
+			(compute-predict-lhses lhs already-done))
+		      lhses)))))))
 
-  (define (next-predict item-set)
-    (let loop ((item-set item-set) (predict-set item-set))
-      (if (null? item-set)
-	  predict-set
-	  (let* ((item (car item-set))
-		 (rhs-rest (item-rhs-rest item)))
-	    (if (null? rhs-rest)
-		(loop (cdr item-set) predict-set)
-		(let ((lhs (car rhs-rest)))
-		  (if (terminal? lhs grammar)
-		      (loop (cdr item-set) predict-set)
-		      (let ((new-items (initial-items lhs)))
-			(loop (cdr item-set)
-			      (items-merge new-items predict-set))))))))))
+    (define (predict-lhses lhs)
+      (cond
+       ((vector-ref predict-sets lhs)
+	=> identity)
+       (else
+	(let ((lhses (uniq (compute-predict-lhses lhs '()))))
+	  (vector-set! predict-sets lhs lhses)
+	  lhses))))
 
-  (let loop ((predict-set (strip-lookaheads state)))
-    (let ((new-predict-set (next-predict predict-set)))
-      (if (not (predict-equal? predict-set new-predict-set))
-	  (loop new-predict-set)
-	  (add-slr-lookahead predict-set k grammar)))))
+    (let* ((initial-predict-lhses
+	    (sequences-initial-nonterminals (map item-rhs-rest state) grammar))
+	   ;; (dummy (begin (write initial-predict-lhses) (newline)))
+	   (predict-lhses
+	    (uniq (flatten (map predict-lhses initial-predict-lhses))))
+	   ;; (dummy (begin (write predict-lhses) (newline)))
+	   (predict-productions
+	    (flatten (map (lambda (lhs)
+			    (grammar-productions-with-lhs lhs grammar))
+			  predict-lhses)))
+	   ;; (dummy (begin (write predict-productions) (newline)))
+	   (predict-items
+	    (productions->slr-predict-items predict-productions k grammar))
+	   ;; (dummy (begin (write predict-items) (newline)))
+	   )
+      (append state
+	      predict-items))))
 
-(define (add-slr-lookahead item-set k grammar)
+(define (productions->slr-predict-items productions k grammar)
 
-  (define (add-one-slr-lookahead item)
-    (let ((production (item-production item)))
-      (map (lambda (lookahead)
-	     (make-item production (item-position item) lookahead))
-	   (nonterminal-follow (production-lhs production) k grammar))))
+  (define (production->slr-predict-items production)
+    (map (lambda (lookahead)
+	   (make-item production 0 lookahead))
+	 (nonterminal-follow (production-lhs production) k grammar)))
 
-  (flatten (map add-one-slr-lookahead item-set)))
+  (flatten (map production->slr-predict-items productions)))
 
 ; Operations on LR states
 
@@ -276,3 +307,12 @@
 	((< (car ts1) (car ts2)) #t)
 	((> (car ts1) (car ts2)) #f)
 	(else (number-list<? (cdr ts1) (cdr ts2)))))
+
+(define (uniq l)
+  (let loop ((l l) (r '()))
+    (if (null? l)
+	(reverse r)
+	(loop (cdr l)
+	      (if (member (car l) r)
+		  r
+		  (cons (car l) r))))))
