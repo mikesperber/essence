@@ -1,0 +1,11 @@
+;; Balanced parenthesis
+((S T)					; Non terminals
+ (l r)					; Terminals
+ (					; Productions
+  ((S S T))				; S -> S T
+  ((S T))				; S -> T
+  ((T l S r))				; T -> ( S )
+  ((T l r))				; T -> ( )
+  )
+ S					; Start symbol
+ )
