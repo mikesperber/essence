@@ -1,0 +1,1 @@
+(define-primitive _error - error)
