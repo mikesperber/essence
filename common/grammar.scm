@@ -188,10 +188,11 @@
 	      (list-union
 	       (map
 		(lambda (f-cdr)
-		  (map
-		   (lambda (f-car)
-		     (restricted-append k f-car f-cdr))
-		   (nonterminal-first s k grammar)))
+		  (uniq
+		   (map
+		    (lambda (f-car)
+		      (restricted-append k f-car f-cdr))
+		    (nonterminal-first s k grammar))))
 		cdr-first)))))))
 
 (define (lhs-next-first lhs k grammar old-first)
