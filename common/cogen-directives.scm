@@ -5,7 +5,7 @@
 
 (define-syntax define-memo
   (syntax-rules ()
-    ((define-memo name level)
+    ((define-memo name level more ...)
      (define-syntax name
        (syntax-rules ()
 	 ((name x) x))))))
