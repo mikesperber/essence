@@ -544,7 +544,7 @@
 	       (if (equal? nt (grammar-internal-start grammar))
 		   '(())
 		   '())))
-       (grammar-nonterminals grammaor)))
+       (grammar-nonterminals grammar)))
 
 ;;; perform
 ;;; follow (k, A) = U { first (k, beta follow (k, B)) | B -> alpha A beta }
