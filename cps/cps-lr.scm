@@ -19,12 +19,13 @@
         (let ((accept-items (accept closure)))
 	  (if (member (car input) (next-terminals closure grammar))
 	      (c0 (car input) (cdr input))
-	      (let ((item (select-lookahead-item accept-items k input)))
-		(if item
-		    ((list-ref (cons c0 continuations)
-			       (length (item-rhs item)))
-		     (item-lhs item) input)
-		    'error)))))))
+	      (select-lookahead-item
+	       accept-items k input
+	       (lambda (item)
+		 ((list-ref (cons c0 continuations)
+				(length (item-rhs item)))
+		      (item-lhs item) input))
+	       (lambda () 'error)))))))
 
 ;; ~~~~~~~~~~~~
 
@@ -43,18 +44,17 @@
 
 ;; ~~~~~~~~~~~~
 
-(define (select-lookahead-item item-set k input)
+(define (select-lookahead-item item-set k input cont fail)
   (let ((input-front (take k input)))
-    (first (lambda (item)
-	     (equal? input-front (item-lookahead item)))
-	   item-set)))
+    (let loop ((item-set item-set))
+      (if (null? item-set)
+	  (fail)
+	  (let ((item (car item-set)))
+	    (if (equal? input-front (item-lookahead item))
+		(cont item)
+		(loop (cdr item-set))))))))
 
 (define (take n l)
   (if (zero? n)
       '()
       (cons (car l) (take (- n 1) (cdr l)))))
-
-(define (first p l)
-  (cond ((null? l) #f)
-	((p (car l) (car l)))
-	(else (first p (cdr l)))))
