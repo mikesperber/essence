@@ -22,3 +22,10 @@
 	 l				; it just works out that way	 
 	 #f))
    l))
+
+(define (stream->list stream)
+  (let loop ((stream stream) (reverse-list '()))
+    (if (stream-empty? stream)
+	(reverse reverse-list)
+	(loop (stream-cdr stream)
+	      (cons (stream-car stream) reverse-list)))))
