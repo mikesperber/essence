@@ -172,7 +172,7 @@
 	     (and (member (car f-1) f-2)
 		  (loop (cdr f-1)))))))
 	     
-(define (first-map-equal? fm-1 fm-2)
+(define (map-equal? fm-1 fm-2)
   (let ((size (vector-length fm-1)))
     (let loop ((i 0))
       (or (= i size)
@@ -186,7 +186,7 @@
       (compute-first-1 grammar)
       (let loop ((first-map (initial-first-map grammar)))
 	(let ((new-first-map (next-first-map grammar k first-map)))
-	  (if (first-map-equal? first-map new-first-map)
+	  (if (map-equal? first-map new-first-map)
 	      first-map
 	      (loop new-first-map))))))
 
@@ -233,6 +233,10 @@
     (define (depth-association nonterminal)
       (vector-ref depths nonterminal))
 
+    (define (overwrite-first! nonterminal-1 nonterminal-2)
+      (vector-set! first-map nonterminal-1
+		   (vector-ref first-map nonterminal-2)))
+
     (define (merge-firsts! lhs nonterminal)
       (vector-set! first-map lhs
 		   (union (vector-ref first-map lhs)
@@ -255,29 +259,17 @@
 		       =
 		       for-each-induction
 		       associate-depth! depth-association
-		       merge-firsts!)
+		       overwrite-first! merge-firsts!)
     first-map))
 
 ; Follow set computation
 
-(define (follow-map-equal? fm-1 fm-2)
-  (let loop ((fm-1 fm-1))
-    (or (null? fm-1)
-	(let* ((nonterm-1 (caar fm-1))
-	       (first-1 (cdar fm-1))
-	       (first-2 (cdr (assoc nonterm-1 fm-2))))
-	  (and (first-equal? first-1 first-2)
-	       (loop (cdr fm-1)))))))
-
 (define (initial-follow-map grammar)
-  ;; start symbol must be followed by the empty string to get off the
-  ;; ground
-  (map (lambda (nt)
-	 (cons nt
-	       (if (equal? nt (grammar-start grammar))
-		   '(())
-		   '())))
-       (grammar-nonterminals grammar)))
+  (let ((follow-map (make-vector (grammar-number-of-nonterminals grammar) '())))
+    ;; start symbol must be followed by the empty string to get off the
+    ;; ground
+    (vector-set! follow-map (grammar-start grammar) '(()))
+    follow-map))
 
 ;;; perform
 ;;; follow (k, A) = U { first (k, beta follow (k, B)) | B -> alpha A beta }
@@ -285,35 +277,126 @@
 ;;; follow-set as appropriate
 
 (define (next-follow-map grammar k first-map last-follow-map)
-  (let loop ((productions (grammar-productions grammar))
-	     (last-follow-map last-follow-map))
-    (if (null? productions)
-	last-follow-map
-	(let ((lhs (production-lhs (car productions))))
-	  (let rhs-loop ((rhs-rest (production-rhs (car productions)))
-			 (last-follow-map last-follow-map))
-	    (if (null? rhs-rest)
-		(loop (cdr productions) last-follow-map)
-		(let ((sym (car rhs-rest)))
-		  (if (terminal? sym grammar)
-		      (rhs-loop (cdr rhs-rest) last-follow-map)
-		      (let* ((fi-rest (sf-first (cdr rhs-rest) k grammar first-map))
-			     (fo-lhs (cdr (assoc lhs last-follow-map)))
-			     (fo-sym (uniq
-				      (pair-map (lambda (xs ys) (restricted-append k xs ys))
-					       fi-rest fo-lhs))))
-		      (rhs-loop (cdr rhs-rest)
-				(update-follow-map last-follow-map
-						   sym fo-sym)))))))))))
+  (let ((new-follow-map (copy-vector last-follow-map)))
+    (let loop ((productions (grammar-productions grammar)))
+      (if (not (null? productions))
+	  (let ((lhs (production-lhs (car productions))))
+	    (let rhs-loop ((rhs-rest (production-rhs (car productions))))
+	      (if (null? rhs-rest)
+		  (loop (cdr productions))
+		  (let ((sym (car rhs-rest)))
+		    (if (terminal? sym grammar)
+			(rhs-loop (cdr rhs-rest))
+			(let* ((fi-rest (sf-first (cdr rhs-rest) k grammar first-map))
+			       (fo-lhs (vector-ref new-follow-map lhs))
+			       (fo-sym (uniq
+					(pair-map (lambda (xs ys)
+						    (restricted-append k xs ys))
+						  fi-rest fo-lhs))))
+			  (vector-set! new-follow-map sym
+				       (union fo-sym 
+					      (vector-ref new-follow-map sym)))
+			  (rhs-loop (cdr rhs-rest))))))))))
+    new-follow-map))
 
-(define (update-follow-map follow-map sym fo-sym)
-  (let loop ((follow-map follow-map))
-    (if (equal? (caar follow-map) sym)
-	(cons (cons sym (union fo-sym (cdar follow-map)))
-	      (cdr follow-map))
-	(cons (car follow-map)
-	      (loop (cdr follow-map))))))
+(define (compute-follow grammar k first-map)
+  ;; fixpoint iteration
+  (let loop ((follow-map (initial-follow-map grammar)))
+    (let ((new-follow-map (next-follow-map grammar k first-map follow-map)))
+      (if (map-equal? follow-map new-follow-map)
+	  follow-map
+	  (loop new-follow-map)))))
 
+; follow_1 computation
+
+(define (compute-follow-1 grammar first-map)
+
+  (let ((nullable? (compute-nullable? grammar))
+	(follow-map (make-vector (grammar-number-of-nonterminals grammar) '()))
+	(depths (make-vector (grammar-number-of-nonterminals grammar) 0)))
+
+    (define (for-each-nonterminal f)
+      (for-each f (grammar-nonterminals grammar)))
+
+    (define (for-each-induction f nonterminal)
+      (for-each
+       (lambda (lhs)
+	 (if (any? (lambda (production)
+		     (cond
+		      ((last-memv nonterminal (production-rhs production))
+		       => (lambda (rhs-rest)
+			    (sequence-nullable? (cdr rhs-rest) grammar nullable?)))
+		      (else #f)))
+		   (productions-with-lhs lhs grammar))
+	     (f lhs)))
+       (grammar-nonterminals grammar)))
+
+    (define (associate-depth! nonterminal depth)
+      (vector-set! depths nonterminal depth))
+    
+    (define (depth-association nonterminal)
+      (vector-ref depths nonterminal))
+
+    (define (overwrite-follow! nonterminal-1 nonterminal-2)
+      (vector-set! follow-map nonterminal-1
+		   (vector-ref follow-map nonterminal-2)))
+
+
+    (define (merge-follows! lhs nonterminal)
+      (vector-set! follow-map lhs
+		   (union (vector-ref follow-map lhs)
+			  (vector-ref follow-map nonterminal))))
+
+    (for-each
+     (lambda (nonterminal)
+       (let production-loop ((productions (grammar-productions grammar))
+			     (follow '()))
+	 (cond 
+	  ((null? productions)
+	   (vector-set! follow-map nonterminal follow))
+	  ((memv nonterminal (production-rhs (car productions)))
+	   => (lambda (rhs-rest)
+		(let rhs-loop ((rhs-rest (cdr rhs-rest))
+			       (follow follow))
+		  (if (null? rhs-rest)
+		      (production-loop (cdr productions) follow)
+		      (let* ((first (delq '()
+					  (sf-first rhs-rest 1 grammar first-map)))
+			     (follow (union first follow)))
+			(cond 
+			 ((and (nonterminal? (car rhs-rest) grammar)
+			       (nullable? (car rhs-rest)))
+			  (rhs-loop (cdr rhs-rest) follow))
+			 ((memv nonterminal rhs-rest)
+			  => (lambda (rhs-rest)
+			       (rhs-loop (cdr rhs-rest) follow)))
+			 (else
+			  (production-loop (cdr productions) follow))))))))
+	  (else
+	   (production-loop (cdr productions) follow)))))
+     (grammar-nonterminals grammar))
+
+    (vector-set! follow-map (grammar-start grammar)
+		 (cons '() (vector-ref follow-map (grammar-start grammar))))
+
+    (complete-subsets! for-each-nonterminal
+		       =
+		       for-each-induction
+		       associate-depth! depth-association
+		       overwrite-follow! merge-follows!)
+
+    follow-map))
+
+; List utilities
+
+(define (last-memv x l)
+  (let loop ((rest l) (tail #f))
+    (cond
+     ((memv x rest)
+      => (lambda (rest)
+	   (loop (cdr rest) rest)))
+     (else tail))))
+      
 (define (pair-map f xs ys)
   (let xs-loop ((xs xs))
     (if (null? xs)
@@ -324,16 +407,6 @@
 		(xs-loop (cdr xs))
 		(let ((y (car ys)))
 		  (cons (f x y) (ys-loop (cdr ys))))))))))
-
-(define (compute-follow grammar k first-map)
-  ;; fixpoint iteration
-  (let loop ((follow-map (initial-follow-map grammar)))
-    (let ((new-follow-map (next-follow-map grammar k first-map follow-map)))
-      (if (follow-map-equal? follow-map new-follow-map)
-	  follow-map
-	  (loop new-follow-map)))))
-
-; List utilities
 
 (define (uniq l)
   (let loop ((l l) (r '()))
@@ -373,3 +446,10 @@
 		(restricted-append (- k 1)
 				   (cdr l1)
 				   l2)))))
+(define (copy-vector vector)
+  (let* ((length (vector-length vector))
+	 (copy (make-vector length)))
+    (do ((i 0 (+ 1 i)))
+	((= i length))
+      (vector-set! copy i (vector-ref vector i)))
+    copy))
