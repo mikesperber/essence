@@ -6,25 +6,28 @@
 				    item-set))
 	     (remaining k)
 	     (input input))
-    (cond
-     ((null? lookaheads+items)
-      #f)
-     ((or (zero? remaining) (null? (cdr lookaheads+items)))
-      (cdar lookaheads+items))
-     ((and (not (= k remaining))
-	   (stream-empty? input)) ; we covered this previously
-      (let ((empties
-	     (filter (lambda (lookahead+item)
-		       (null? (car lookahead+item)))
-		     lookaheads+items)))
-	(if (null? empties)
-	    #f
-	    (cdar empties))))
-     (else
-      (loop (filter-lookaheads+items lookaheads+items
-				     (car (stream-car input)))
-	    (- remaining 1)
-	    (stream-cdr input))))))
+    (_memo2
+     (cond
+      ((null? lookaheads+items)
+       #f)
+      ((zero? remaining)
+       (cdar lookaheads+items))
+      ((null? (cdr lookaheads+items))
+       (cdar lookaheads+items))
+      ((and (not (= k remaining))
+	    (stream-empty? input))	; we covered this previously
+       (let ((empties
+	      (filter (lambda (lookahead+item)
+			(null? (car lookahead+item)))
+		      lookaheads+items)))
+	 (if (null? empties)
+	     #f
+	     (cdar empties))))
+      (else
+       (loop (filter-lookaheads+items lookaheads+items
+				      (car (stream-car input)))
+	     (- remaining 1)
+	     (stream-cdr input)))))))
 
 (define (filter-lookaheads+items lookaheads+items terminal)
   (let* ((non-empties (filter (lambda (lookahead+item)
@@ -50,8 +53,8 @@
   (let loop ((l l) (r '()))
     (cond ((null? l)
 	   (reverse r))
-          ((pred (car l))
+	  ((pred (car l))
 	   (loop (cdr l) (cons (car l) r)))
-          (else
+	  (else
 	   (loop (cdr l) r)))))
 
