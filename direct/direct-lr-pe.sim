@@ -7,23 +7,28 @@
 
 ;;; step 1: plain parser
 ;;; step 2: attribute evaluation
+;;; step 3: imperative features
 
 (defprim (my-list-tail l k) (list-tail l k))
 
 ;;; primitives
 
-(defprim (parse-result the-lhs the-dot the-attribute the-inp)
-  (vector the-lhs the-dot the-attribute the-inp))
-(defprim (result-lhs result)
-  (vector-ref result 0))
-(defprim (result-dot result)
-  (vector-ref result 1))
-(defprim (result-att result)
-  (vector-ref result 2))
-(defprim (result-inp result)
-  (vector-ref result 3))
+(defprim-opaque (allocate-variables)
+  (eval '(begin (define parser-inp)
+		(define parser-lhs)
+		(define parser-att))
+	(interaction-environment)))
+
+(defprim-opaque (readvar-inp) parser-inp)
+(defprim-opaque (readvar-lhs) parser-lhs)
+(defprim-opaque (readvar-att) parser-att)
+
+(defprim-opaque (set-inp! val) (set! parser-inp val))
+(defprim-opaque (set-lhs! val) (set! parser-lhs val))
+(defprim-opaque (set-att! val) (set! parser-att val))
 
 ;;; handle attribute stack
+
 (define (empty-stack) '())
 (define (push elem stack)
   (cons elem stack))
@@ -127,7 +132,8 @@
 	      ;; shift-nonterminal
 	      (parse-bar grammar k first-map closure lhs
 			 attribute-value attribute-stack input)
-	      (parse-result lhs rhs-length attribute-value input)))))
+	      (begin (set-lhs! lhs) (set-att! attribute-value) (set-inp! input)
+		     rhs-length)))))
 
 ;;; body of let*
 	
@@ -152,15 +158,15 @@
 			       input)))
     (if (final? next-state grammar)
 	result
-	(let* ((the-lhs (result-lhs result))
-	       (the-dot (result-dot result))
-	       (the-att (result-att result))
-	       (the-inp (result-inp result))
-	       (nts (next-nonterminals closure grammar)))
+	(let* ((nts (next-nonterminals closure grammar))
+	       (the-dot result))
 	  (if (null? nts)
-	      (parse-result the-lhs (- the-dot 1) the-att the-inp)
+	      (- the-dot 1)
 	      (if (< 1 the-dot)
-		  (parse-result the-lhs (- the-dot 1) the-att the-inp)
+		  (- the-dot 1)
+		  (let* ((the-lhs (readvar-lhs))
+			 (the-att (readvar-att))
+			 (the-inp (readvar-inp)))
 	      (let loop ((nts nts))
 		(if (null? (cdr nts))
 		    (parse-bar grammar k first-map closure (car nts)
@@ -168,11 +174,12 @@
 		    (if (equal? (car nts) the-lhs)
 			(parse-bar grammar k first-map closure (car nts)
 				   the-att attribute-stack the-inp)
-			(loop (cdr nts)))))))))))
+			(loop (cdr nts))))))))))))
 
 (define (direct-parse-main source-grammar k input)
   (let* ((grammar (source-grammar->grammar source-grammar k))
 	 (start-production (car (grammar-productions grammar))))
+    (allocate-variables)
     (direct-parse grammar
 		  k
 		  (compute-first grammar k)
