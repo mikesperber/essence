@@ -1,11 +1,6 @@
 ;; Interfaces
 ;; ~~~~~~~~~~
 
-(define-interface cogen-directives-interface
-  (export (define-without-memoization :syntax)
-	  (define-memo :syntax)
-	  (define-primitive :syntax)))
-
 (define-interface source-grammar-interface
   (export (source-grammar-terminals (proc (:value) :value))
 	  (source-grammar-nonterminals (proc (:value) :value))
@@ -21,17 +16,18 @@
 	  (error-terminal :number)))
   
 (define-interface lr-runtime-interface
-  (export eoi-terminal
-	  source-grammar-terminals
-	  translate-input-list
-	  define-terminals
-	  terminate-input-list))
+  (export (eoi-terminal (proc () :number))
+	  (error-terminal (proc () :number))
+	  (source-grammar-terminals (proc (:value) :value))
+	  (translate-input-list (proc (:value :value) :value))
+	  (define-terminals (proc (:value) :value))
+	  (terminate-input-list (proc (:value :number) :value))))
 
 (define-interface lr-spectime-interface
   (export compute-closure compute-lr-closure
 	  compute-slr-closure add-slr-lookahead
 	  goto accept final?
-	  next-terminals next-nonterminals
+	  active next-terminals next-nonterminals
 	  item-lhs item-rhs make-item
 	  items->trie
 	  production-rhs
@@ -73,9 +69,7 @@
 
 (define-structure cps-lr parser-interface
   (open scheme signals lr-spectime lr-runtime
-	cogen-directives cogen-define-data)
-  (begin
-    (define _error error))
+	cogen-directives define-data)
   (files (common memo)
 	 (common the-trick)
 	 (common lookahead)
