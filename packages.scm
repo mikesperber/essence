@@ -8,12 +8,14 @@
 (define-interface stream-interface
   (export make-stream
 	  stream-car stream-cdr stream-empty?
-	  list->stream))
+	  list->stream stream->list))
 
 (define-interface grammar-interface
   (export grammar-productions grammar-nonterminals
 	  grammar-start grammar-error
+	  grammar-number-of-nonterminals
 	  grammar-productions-with-lhs
+	  grammar-fetch-property
 	  production-lhs production-rhs production-attribution
 
 	  grammar-start-production
@@ -29,7 +31,7 @@
 
 (define-interface lr-spectime-interface
   (export compute-lr-closure
-	  compute-slr-closure add-slr-lookahead
+	  compute-slr-closure
 	  goto accept initial? handles-error?
 	  active next-terminals next-nonterminals
 	  make-item
