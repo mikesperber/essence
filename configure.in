@@ -1,0 +1,6 @@
+dnl Autoconf, or how I learned to love the bomb
+
+AC_INIT(packages.scm)
+AC_PROG_INSTALL
+AC_OUTPUT(Makefile)
+

@@ -1,7 +1,14 @@
 SHELL = /bin/sh
 
-prefix = /afs/informatik.uni-tuebingen.de/home/sperber/temp/essence-1.0
-exec_prefix = $(prefix)
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_DATA = @INSTALL_DATA@
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
 bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
 sharedir = $(prefix)/share
@@ -10,10 +17,6 @@ docdir = $(prefix)/doc
 mandir = $(prefix)/man/man$(manext)
 
 TEMPDIR = /tmp
-
-INSTALL = /bin/installbsd -c -gPUstaff
-INSTALL_PROGRAM = $(INSTALL)
-INSTALL_DATA = $(INSTALL) -m 644
 
 RUNNABLE = essence
 
@@ -213,14 +216,15 @@ $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm: \
 	          '(goal compute-parser)				\
 	          '(open signals stream					\
 		         grammar lr-spectime)				\
-	          \"$(PARSER_BASE)-genext.scm\")				\
+	          \"$(PARSER_BASE)-genext.scm\")			\
 	         #t)";							\
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(PGG_HEAPSIZE)
 
 import-genext:
-	rm -rf $(GENEXT_DIRECTORY); \
-	cd $(PGG_DIRECTORY); \
-	$(MAKE) $(GENEXT_BASE)-$(GENEXT_VERSION).tar.gz
-	mkdir $(GENEXT_DIRECTORY); \
-	$(ZCAT) $(PGG_DIRECTORY)/$(GENEXT_BASE)-$(GENEXT_VERSION).tar.gz | (cd $(GENEXT_DIRECTORY); $(TAR) xvf -)
+	rm -rf $(GENEXT_DIRECTORY) &&					\
+	cd $(PGG_DIRECTORY) &&						\
+	$(MAKE) $(GENEXT_BASE)-$(GENEXT_VERSION).tar.gz &&		\
+	mkdir $(GENEXT_DIRECTORY) &&					\
+	$(ZCAT) $(PGG_DIRECTORY)/$(GENEXT_BASE)-$(GENEXT_VERSION).tar.gz	\
+	| (cd $(GENEXT_DIRECTORY); $(TAR) xvf -)
