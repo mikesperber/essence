@@ -67,6 +67,15 @@
       (pred? (car list))
       (or-map pred? (cdr list))))
 
+(defprim (partition-list pred l)
+  (let loop ((l l) (yes '()) (no '()))
+    (cond ((null? l)
+           (cons (reverse yes) (reverse no)))
+          ((pred (car l))
+           (loop (cdr l) (cons (car l) yes) no))
+          (else
+           (loop (cdr l) yes (cons (car l) no))))))
+
 ; Grammars
 ; ========
 
@@ -163,6 +172,15 @@
 	 (item-position item-2))
       (string<? (symbols->string (item-lookahead item-1))
 		(symbols->string (item-lookahead item-2)))))
+
+(defprim (partition-items item items)
+  (let ((production (item-production item))
+	 (position (item-position item)))
+  (partition-list
+   (lambda (item)
+     (and (equal? production (item-production item))
+	  (equal? position (item-position item))))
+   items)))
 
 (defprim (insert-item item-set item)
   (if (null? item-set)
