@@ -11,3 +11,4 @@
 (define-primitive not - pure)
 (define-primitive - - pure)
 (define-primitive zero? - pure)
+(define-primitive memv - pure)

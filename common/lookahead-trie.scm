@@ -1,53 +1,62 @@
 (define-without-memoization
   (find-lookahead-item item-set k input)
-  (let loop ((lookaheads+items (map (lambda (item)
-				      (cons (item-lookahead item)
-					    item))
-				    item-set))
+  (let loop ((lookahead-sets+items (items->lookahead-sets+items item-set))
 	     (remaining k)
 	     (input input))
     (_memo2
      (cond
-      ((null? lookaheads+items)
+      ((null? lookahead-sets+items)
        #f)
       ((zero? remaining)
-       (cdar lookaheads+items))
-      ((null? (cdr lookaheads+items))
-       (cdar lookaheads+items))
+       (cdar lookahead-sets+items))
       ((and (not (= k remaining))
 	    (stream-empty? input))	; we covered this previously
        (let ((empties
-	      (filter (lambda (lookahead+item)
-			(null? (car lookahead+item)))
-		      lookaheads+items)))
+	      (filter (lambda (lookahead-set+item)
+			(memq '() (car lookahead-set+item)))
+		      lookahead-sets+items)))
 	 (if (null? empties)
 	     #f
 	     (cdar empties))))
       (else
-       (loop (filter-lookaheads+items lookaheads+items
-				      (car (stream-car input)))
+       (loop (filter-lookahead-sets+items lookahead-sets+items
+					  (car (stream-car input))
+					  remaining)
 	     (- remaining 1)
 	     (stream-cdr input)))))))
 
-(define (filter-lookaheads+items lookaheads+items terminal)
-  (let* ((non-empties (filter (lambda (lookahead+item)
-				(not (null? (car lookahead+item)))) 
-			      lookaheads+items))
-	 (one-lookaheads (uniq (map (lambda (lookahead+item)
-				      (car (car lookahead+item)))
+(define (filter-lookahead-sets+items lookahead-sets+items terminal remaining)
+  (let loop ((lookahead-sets+items lookahead-sets+items))
+    (if (not (null? lookahead-sets+items))
+	(let* ((lookahead-set+item (car lookahead-sets+items))
+	       (lookahead-set (car lookahead-set+item))
+	       (non-empties (uniq (filter (lambda (lookahead)
+					    (pair? lookahead))
+					  lookahead-set))))
+	  (cond
+	   ((null? non-empties)
+	    (loop (cdr lookahead-sets+items)))
+	   ((> remaining 1)		; general case
+	    (let* ((static-terminal (maybe-the-member terminal non-empties))
+		   (matches (filter (lambda (lookahead)
+				      (eqv? static-terminal (car lookahead)))
 				    non-empties)))
-	 (static-terminal (maybe-the-member terminal 
-					    one-lookaheads))
-	 (matches
-	  (filter
-	   (lambda (lookahead+item)
-	     (eqv? static-terminal (caar lookahead+item)))
-	   non-empties)))
-
-    (map (lambda (lookahead+item)
-	   (cons (cdr (car lookahead+item))
-		 (cdr lookahead+item)))
-	 matches)))
+	      (if (null? matches)
+		  (loop lookahead-sets+items)
+		  (cons (cons (map (lambda (lookahead)
+				     (cdr lookahead))
+				   matches)
+			      (cdr lookahead-set+item))
+			(loop (cdr lookahead-sets+items))))))
+	   (else			; remaining = 1
+	    (let ((one-lookaheads (map (lambda (lookahead)
+					 (car lookahead))
+				       non-empties)))
+	      (if (memv terminal one-lookaheads)
+		  (cons (cons '(()) (cdr lookahead-set+item))
+			(loop (cdr lookahead-sets+items)))
+		  (loop (cdr lookahead-sets+items)))))))
+	'())))
 
 (define (filter pred l)
   (let loop ((l l) (r '()))
@@ -66,3 +75,4 @@
 	      (if (member (car l) r)
 		  r
 		  (cons (car l) r))))))
+

@@ -49,7 +49,7 @@
      (and (equal? production (item-production item))
 	  (equal? position (item-position item))))
    items)))
-		  
+
 (define (items-merge is-1 is-2)
   (append (filter
 	   (lambda (item)
@@ -267,6 +267,36 @@
   (first (lambda (item)
 	   (null? (item-lookahead item)))
 	 accept-items))
+
+(define (items->lookahead-sets+items items)
+  (if (null? items)
+      items
+      (let* ((sorted-items (sort-list items
+				      (lambda (item-1 item-2)
+					(production<? (item-production item-1)
+						      (item-production item-2)))))
+	     (first-item (car sorted-items)))
+	
+	(let loop ((current-item first-item)
+		   (current-set (list (item-lookahead first-item)))
+		   (items (cdr sorted-items))
+		   (lookahead-sets+items '()))
+	  (if (null? items)
+	      (reverse (cons (cons current-set current-item)
+			     lookahead-sets+items))
+	      (let ((next-item (car items)))
+		(if (equal? (item-production current-item)
+			    (item-production next-item))
+		    (loop current-item
+			  (cons (item-lookahead next-item)
+				current-set)
+			  (cdr items)
+			  lookahead-sets+items)
+		    (loop next-item
+			  (list (item-lookahead next-item))
+			  (cdr items)
+			  (cons (cons current-set current-item)
+				lookahead-sets+items)))))))))
 
 (define (initial? state grammar)
   (any? (lambda (item)
