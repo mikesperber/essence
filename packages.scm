@@ -33,7 +33,8 @@
 (define-interface lr-spectime-interface
   (export compute-lr-closure
 	  compute-slr-closure
-	  goto accept find-eoi-lookahead-item initial? handles-error?
+	  goto accept find-eoi-lookahead-item items->lookahead-sets+items
+	  initial? handles-error?
 	  active next-terminals next-nonterminals
 	  make-item
 	  item-lhs item-rhs item-production item-lookahead
@@ -42,6 +43,9 @@
 
 (define-interface parser-interface
   (export parse))
+
+(define-interface parser-generate-interface
+  (export generate-parser))
 
 ; Structures
 
@@ -129,6 +133,24 @@
   (open scheme signals grammar lr-spectime stream
 	cogen-directives)
   (files (common the-trick)
-	 (common lookahead)
+	 (common lookahead-trie)
 	 (common memo)
 	 (cps cps-lr)))
+
+(define-structure cps-lr-generate parser-generate-interface
+  (open scheme
+	cps-lr-genext pgg-specialize
+	cogen-gensym cogen-globals
+	big-util)
+  (begin
+    (define (generate-parser grammar lookahead method goal-name)
+      (gensym-ignore-name-stubs!)
+      (set-generate-flat-program! #t)
+      (specialize compute-parser
+		  '(compute-parser 0 0 0 1)
+		  (list grammar lookahead method 'input)
+		  goal-name)
+      (append (filter (lambda (form)
+			(not (eq? 'define-data (car form))))
+		      *support-code*)
+	      *residual-program*))))
