@@ -90,8 +90,7 @@
 
     (define (initial-items symbol lookahead-suffix)
 
-      (apply
-       append
+      (flatten
        (map (lambda (production)
 	      (map
 	       (lambda (la)
@@ -133,8 +132,7 @@
 
     (define (initial-items symbol lookahead-suffix)
 
-      (apply
-       append
+      (flatten
        (map (lambda (production)
 	      (map
 	       (lambda (la)
@@ -243,9 +241,7 @@
 	  (next-symbols state-closure grammar)))
 
 (define (handles-error? state-closure grammar)
-  (or-map (lambda (symbol)
-	    (equal? (grammar-error grammar) symbol))
-	  (next-symbols state-closure grammar)))
+  (member (grammar-error grammar) (next-symbols state-closure grammar)))
 
 (define (accept state-closure)
   (filter (lambda (item)
@@ -264,6 +260,11 @@
 		    (= 1 (item-position item)))
 	       (loop (cdr item-set)))))))
 
+(define (initial? state grammar)
+  (any? (lambda (item)
+	  (equal? (grammar-start grammar) (item-lhs item)))
+	state))
+
 (define (add-slr-lookahead item-set follow-map)
   (let ((add-one-slr-lookahead
 	 (lambda (item)
@@ -271,7 +272,7 @@
 	     (map (lambda (la)
 		    (make-item production (item-position item) la))
 		  (cdr (assoc (production-lhs production) follow-map)))))))
-    (apply append (map add-one-slr-lookahead item-set))))
+    (flatten (map add-one-slr-lookahead item-set))))
 
 (define (find-repair-terminal grammar item-set)
   (let loop ((item-set item-set))
@@ -537,11 +538,6 @@
 ;; Generic stuff
 ;; ~~~~~~~~~~~~~
 
-(define (uniq l)
-  (cond ((null? l) l)
-	((member (car l) (cdr l)) (uniq (cdr l)))
-	(else (cons (car l) (uniq (cdr l))))))
-
 (define (flatten l)
   (apply append l))
 
@@ -554,10 +550,11 @@
 		  (cons (car rest) result)
 		  result)))))
 
-(define (or-map pred? list)
-  (and (not (null? list))			;;;; was (or (null? list) ...)
-       (or (pred? (car list))
-	   (or-map pred? (cdr list)))))
+(define (any? p l)
+  (let loop ((l l))
+    (and (not (null? l))
+	 (or (p (car l))
+	     (loop (cdr l))))))
 
 (define (partition-list pred l)
   (let loop ((l l) (yes '()) (no '()))

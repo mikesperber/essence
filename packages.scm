@@ -9,12 +9,12 @@
   (export make-stream))
 
 (define-interface access-stream-interface
-  (export stream-car stream-cdr))
+  (export stream-car stream-cdr stream-empty?))
 
 (define-interface grammar-interface
   (export make-production
 	  grammar-productions grammar-nonterminals
-	  grammar-start grammar-eoi grammar-error
+	  grammar-start grammar-error
 	  production-lhs production-rhs production-attribution
 
 	  grammar-start-production
@@ -24,7 +24,7 @@
 (define-interface lr-spectime-interface
   (export compute-closure compute-lr-closure
 	  compute-slr-closure add-slr-lookahead
-	  goto accept final?
+	  goto accept final? initial?
 	  active next-terminals next-nonterminals
 	  make-item
 	  item-lhs item-rhs item-production item-lookahead

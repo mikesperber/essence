@@ -1,13 +1,12 @@
 ; Start-separated grammars
 
 (define-record-type grammar :grammar
-  (make-grammar nonterminals terminals eoi error
+  (make-grammar nonterminals terminals error
 		start
 		productions
 		terminal-attribution)
   (nonterminals grammar-nonterminals)
   (terminals grammar-terminals)
-  (eoi grammar-eoi)
   (error grammar-error)
   (start grammar-start)
   (productions grammar-productions)
@@ -58,21 +57,21 @@
        terminal-attribution)
      (begin
        (define-enumeration symbol-enum
-	 (eoi error terminals ... start-symbol nonterminals ...))
+	 ($error terminals ... $start nonterminals ...))
        (define grammar-name
 	 (make-grammar (list (enum symbol-enum nonterminals) ...)
-		       (list (enum symbol-enum eoi)
-			     (enum symbol-enum error)
+		       (list (enum symbol-enum $error)
 			     (enum symbol-enum terminals) ...)
-		       (enum symbol-enum eoi)
-		       (enum symbol-enum error)
-		       (enum symbol-enum start-symbol)
+		       (enum symbol-enum $error)
+		       (enum symbol-enum $start)
 		       (list (make-production
+			      (enum symbol-enum $start)
+			      (list (enum symbol-enum start-symbol))
+			      '(lambda (x) x))
+			     (make-production
 			      (enum symbol-enum lhs)
 			      (list (enum symbol-enum rhs) ...)
 			      `(lambda ,(attribution-arglist '(rhs ...))
 				 expression))
 			     ...)
 		       'terminal-attribution))))))
-
-
