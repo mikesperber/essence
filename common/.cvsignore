@@ -6,3 +6,4 @@ lr-runtime-gambit.c
 lr-spectime-gambit.c
 source-grammar-gambit.c
 source-grammar-gambit_.c
+*-gambit.c

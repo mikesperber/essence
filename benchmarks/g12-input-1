@@ -1,0 +1,116 @@
+l l fname l vname vname vname r
+       =
+       l if l equal l car l car vname r r vname r
+           l call fname l cons l cdr l cdr l car vname r r r l cdr vname r r vname r
+           l if l equal l cdr vname r l quote lisp-s-exp r r
+               l quote lisp-s-exp r
+               l call fname vname vname l call fname l quote lisp-s-exp r l car l cdr vname r r r r r r r
+ l fname
+    l vname vname r
+    =
+    l if l equal l car vname r l quote lisp-s-exp r r
+        l cons vname l cons l cdr vname r l quote lisp-s-exp r r r
+        l call fname
+              l call fname vname l cons l car vname r l quote lisp-s-exp r r r
+              l cdr vname r r r r
+ l fname
+    l vname vname r
+    =
+    l if l equal vname l quote lisp-s-exp r r vname l cons l car vname r l call fname l cdr vname r vname r r r r
+ l fname
+    l vname vname r
+    =
+    l if l equal l quote lisp-s-exp r l car l car vname r r r
+        l call fname
+              l car l cdr l car vname r r r
+              vname
+              l quote lisp-s-exp r r
+        l if l equal l quote lisp-s-exp r l car l car vname r r r
+            l if l equal l car l cdr l cdr l car vname r r r r l quote lisp-s-exp r r
+                l if l call fname l car l cdr l car vname r r r vname r
+                    l call fname
+                          l car l cdr l cdr l cdr l car vname r r r r r
+                          vname
+                          l quote lisp-s-exp r r
+                    l call fname
+                          l car l cdr l cdr l cdr l cdr l cdr l cdr l car vname r r r r r r r r
+                          vname
+                          l quote lisp-s-exp r r r
+                l if l equal l car l car vname r r l quote lisp-s-exp r r
+                    l if l call fname
+                              l cons l car l cdr l car vname r r r
+                                    l cons l car l cdr l cdr l car vname r r r r l quote lisp-s-exp r r r
+                              vname r
+                        l call fname
+                              l car l cdr l cdr l cdr l cdr l car vname r r r r r r
+                              vname
+                              l quote lisp-s-exp r r
+                        l call fname
+                              l car l cdr l cdr l cdr l cdr l cdr l cdr l cdr l car vname r r r r r r r r r
+                              vname
+                              l quote lisp-s-exp r r r
+                    l quote lisp-s-exp r r r
+            l if l equal l quote lisp-s-exp r l car l car vname r r r
+                l call fname l cdr l car vname r r vname r
+                l call fname
+                      l call fname l quote lisp-s-exp r l car l cdr vname r r r
+                      l call fname
+                            l car l car vname r r
+                            l cdr l cdr l car vname r r r
+                            vname
+                            vname
+                            l quote lisp-s-exp r r r r r r r
+ l fname
+    l vname vname vname vname vname r
+    =
+    l if l equal vname l quote lisp-s-exp r r
+        l call fname
+              vname
+              l cons l call fname vname vname r l cdr vname r r r
+        l if l equal vname l quote lisp-s-exp r r
+            l call fname
+                  l call fname vname l cons l car vname r l quote lisp-s-exp r r r
+                  l cons l call fname vname vname r l cdr l cdr vname r r r r
+            l if l equal vname l quote lisp-s-exp r r
+                l call fname
+                      l call fname
+                            l call fname vname l cons l car vname r l quote lisp-s-exp r r r
+                            l cons l car l cdr vname r r l quote lisp-s-exp r r r
+                      l cons l call fname vname vname r
+                            l cdr l cdr l cdr vname r r r r r
+                l quote lisp-s-exp r r r r r
+ l fname
+    l vname vname r
+    =
+    l if l equal l car vname r l quote lisp-s-exp r r
+        l car l cdr vname r r
+        l if l equal l car vname r l quote lisp-s-exp r r
+            l equal
+               l call fname l call fname l car l cdr vname r r l quote lisp-s-exp r r vname r
+               l call fname l call fname l car l cdr vname r r l quote lisp-s-exp r r vname r r
+            l call fname l car vname r vname r r r r
+ l fname
+    l vname vname r
+    =
+    l if l equal vname l quote lisp-s-exp r r
+        l car vname r
+        l if l equal vname l quote lisp-s-exp r r
+            l car l cdr vname r r
+            l if l equal vname l quote lisp-s-exp r r l car l cdr l cdr vname r r r l quote lisp-s-exp r r r r r
+ l fname l vname vname r
+       =
+       l if l equal vname l quote lisp-s-exp r r
+           vname
+           l if l equal l car vname r l quote lisp-s-exp r r
+               l call fname l cdr vname r l quote lisp-s-exp r r
+               l call fname
+                     l cdr vname r
+                     l call fname vname l cons l car vname r l quote lisp-s-exp r r r r r r r
+ l fname l vname vname r
+       =
+       l if l equal l car vname r l quote lisp-s-exp r r
+           vname
+           l call fname
+                 l cdr vname r
+                 l call fname vname l cons l car vname r l quote lisp-s-exp r r r r r r r
+
