@@ -7,25 +7,41 @@
       'accept
       (let ((closure (compute-closure state grammar k first-map)))
 
-        (define (c0 symbol input)
-          (let ((next-state (goto closure symbol)))
-            (parse grammar k first-map
-		   next-state
-		   (cons c0
-			 (take (- (active next-state) 1)
-			       continuations))
-		   input)))
+	(define (shift-nonterminal nonterminal input)
+	  (the-trick
+	   nonterminal (next-nonterminals closure grammar)
+	   (lambda (symbol)
+	     (let ((next-state (goto closure symbol)))
+	       (parse grammar k first-map
+		      next-state
+		      (cons shift-nonterminal
+			    (take (- (active next-state) 1)
+				  continuations))
+		      input)))
+	   (lambda ()
+	     'you-cannot-see-me)))
+
+	(define (shift-terminal terminal input fail)
+	  (the-trick
+	   terminal (next-terminals closure grammar)
+	   (lambda (symbol)
+	     (let ((next-state (goto closure symbol)))
+	       (parse grammar k first-map
+		      next-state
+		      (cons shift-nonterminal
+			    (take (- (active next-state) 1)
+				  continuations))
+		      input)))
+	   fail))
 
         (let ((accept-items (accept closure)))
-	  (the-trick
-	   (car input) (next-terminals closure grammar)
-	   (lambda (t)
-	     (c0 t (cdr input)))
+	  (shift-terminal
+	   (car input) (cdr input)
 	   (lambda ()
 	     (select-lookahead-item-the-trick
 	      accept-items k input
 	      (lambda (item)
-		((list-ref (cons c0 continuations)
+		((list-ref (cons shift-nonterminal continuations)
 			   (length (item-rhs item)))
 		 (item-lhs item) input))
 	      (lambda () 'error))))))))
