@@ -17,15 +17,18 @@
 		   input)))
 
         (let ((accept-items (accept closure)))
-	  (if (member (car input) (next-terminals closure grammar))
-	      (c0 (car input) (cdr input))
-	      (select-lookahead-item
-	       accept-items k input
-	       (lambda (item)
-		 ((list-ref (cons c0 continuations)
-				(length (item-rhs item)))
-		      (item-lhs item) input))
-	       (lambda () 'error)))))))
+	  (the-trick
+	   (car input) (next-terminals closure grammar)
+	   (lambda (t)
+	     (c0 t (cdr input)))
+	   (lambda ()
+	     (select-lookahead-item-the-trick
+	      accept-items k input
+	      (lambda (item)
+		((list-ref (cons c0 continuations)
+			   (length (item-rhs item)))
+		 (item-lhs item) input))
+	      (lambda () 'error))))))))
 
 ;; ~~~~~~~~~~~~
 
@@ -44,7 +47,15 @@
 
 ;; ~~~~~~~~~~~~
 
-(define (select-lookahead-item item-set k input cont fail)
+(define (the-trick element set cont fail)
+  (let loop ((set set))
+    (if (null? set)
+	(fail)
+	(if (equal? element (car set))
+	    (cont (car set))
+	    (loop (cdr set))))))
+
+(define (select-lookahead-item-the-trick item-set k input cont fail)
   (let ((input-front (take k input)))
     (let loop ((item-set item-set))
       (if (null? item-set)
