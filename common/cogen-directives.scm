@@ -14,6 +14,6 @@
   (syntax-rules ()
     ((define-primitive o t k)
      (begin
-       (display "defined primitive ") (display o)
+       (display "defined primitive ") (display 'o)
        (newline)))))
        
