@@ -136,41 +136,48 @@
 
 (define (compute-slr-closure state grammar k)
 
-    (define (initial-items symbol)
-      (add-slr-lookahead (map (lambda (production)
-				(make-item production 0 #f))
-			      (grammar-productions-with-lhs symbol grammar))
-			 k grammar))
+  (define (strip-lookaheads items)
+    (map (lambda (item)
+	   (make-item (item-production item)
+		      (item-position item)
+		      #f))
+	 items))
 
-    (define (next-predict item-set)
-      (let loop ((item-set item-set) (predict-set item-set))
-	(if (null? item-set)
-	    predict-set
-	    (let* ((item (car item-set))
-		   (rhs-rest (item-rhs-rest item)))
-	      (if (null? rhs-rest)
-		  (loop (cdr item-set) predict-set)
-		  (let ((lhs (car rhs-rest)))
-		    (if (terminal? lhs grammar)
-			(loop (cdr item-set) predict-set)
-			(let ((new-items (initial-items lhs)))
-			  (loop (cdr item-set)
-				(items-merge new-items predict-set))))))))))
+  (define (initial-items symbol)
+    (map (lambda (production)
+	   (make-item production 0 #f))
+	 (grammar-productions-with-lhs symbol grammar)))
 
-    (let loop ((predict-set state))
-      (let ((new-predict-set (next-predict predict-set)))
-	(if (predict-equal? predict-set new-predict-set)
-	    predict-set
-	    (loop new-predict-set)))))
+  (define (next-predict item-set)
+    (let loop ((item-set item-set) (predict-set item-set))
+      (if (null? item-set)
+	  predict-set
+	  (let* ((item (car item-set))
+		 (rhs-rest (item-rhs-rest item)))
+	    (if (null? rhs-rest)
+		(loop (cdr item-set) predict-set)
+		(let ((lhs (car rhs-rest)))
+		  (if (terminal? lhs grammar)
+		      (loop (cdr item-set) predict-set)
+		      (let ((new-items (initial-items lhs)))
+			(loop (cdr item-set)
+			      (uniq (items-merge new-items predict-set)))))))))))
+
+  (let loop ((predict-set (strip-lookaheads state)))
+    (let ((new-predict-set (next-predict predict-set)))
+      (if (not (predict-equal? predict-set new-predict-set))
+	  (loop new-predict-set)
+	  (add-slr-lookahead predict-set k grammar)))))
 
 (define (add-slr-lookahead item-set k grammar)
-  (let ((add-one-slr-lookahead
-	 (lambda (item)
-	   (let ((production (item-production item)))
-	     (map (lambda (la)
-		    (make-item production (item-position item) la))
-		  (nonterminal-follow (production-lhs production) k grammar))))))
-    (flatten (map add-one-slr-lookahead item-set))))
+
+  (define (add-one-slr-lookahead item)
+    (let ((production (item-production item)))
+      (map (lambda (lookahead)
+	     (make-item production (item-position item) lookahead))
+	   (nonterminal-follow (production-lhs production) k grammar))))
+
+  (flatten (map add-one-slr-lookahead item-set)))
 
 ; Operations on LR states
 
