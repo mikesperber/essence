@@ -66,8 +66,6 @@
 		      handle-error-here 3
 		      input))
 
-	 (write next-closure) (newline)
-
 	 (let loop ((input input))
 
 	   (define (try-reduce)
@@ -82,7 +80,9 @@
 			     attribution
 			     (c-list->list
 			      (c-reverse
-			       (c-take rhs-length attribute-values))))))
+			       (c-cons #f
+				       (c-take (- rhs-length 1)
+					       attribute-values)))))))
 		      (recover attribute-value input))))
 	      ((stream-empty? input)
 	       (error "parse error: premature end of input"))
@@ -147,7 +147,9 @@
      (list (make-item start-production 0 '()))
      (c-nil)
      (c-nil)
-     (lambda (error-status input) (error "unhandled parse error"))
+     (if #t
+	 (lambda (error-status input) (error "unhandled parse error"))
+	 #f)
      0
      input)))
 
