@@ -20,13 +20,12 @@
 	  (accept-items (accept closure))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
-     (define (shift symbol handle-error)
+     (define (shift symbol shift-nonterminal handle-error)
        (let* ((next-state (goto closure symbol))
 	      (keep (- (active next-state) 1)))
 	 (cps-parse grammar k compute-closure
 		    next-state
-		    (c-cons (and (not (null? the-next-nonterminals))
-				 shift-nonterminal)
+		    (c-cons shift-nonterminal
 			    (c-take keep continuations))
 		    (c-cons *attribute-value* (c-take keep attribute-values))
 		    handle-error)))
@@ -43,6 +42,7 @@
 		  (handle-error))
 	      (shift
 	       (the-member nonterminal the-next-nonterminals)
+	       shift-nonterminal
 	       handle-error)))))
 
      ;; error recovery
@@ -116,7 +116,10 @@
 
      (let ((handle-error (if (handles-error? closure grammar)
 			     handle-error-here
-			     handle-error)))
+			     handle-error))
+	   (maybe-shift-nonterminal
+	    (and (not (null? the-next-nonterminals))
+		 shift-nonterminal)))
        (cond
 	((stream-empty? *input*)
 	 (cond
@@ -127,10 +130,12 @@
 	 => (lambda (symbol)
 	      (_memo
 	       (begin
-		 (set! *attribute-value* (cdr (stream-car *input*)))
-		 (set! *input* (stream-cdr *input*))
-		 (set! *error-status* (move-error-status *error-status*))))
-	      (shift symbol handle-error)))
+		 (_memo
+		  (begin
+		    (set! *attribute-value* (cdr (stream-car *input*)))
+		    (set! *input* (stream-cdr *input*))
+		    (set! *error-status* (move-error-status *error-status*))))
+		 (shift symbol maybe-shift-nonterminal handle-error)))))
 	((find-lookahead-item accept-items k *input*) => reduce)
 	(else (handle-error)))))))
 
