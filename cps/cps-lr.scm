@@ -52,8 +52,8 @@
       (else (reduce))))))
 
 (define (parse grammar k method input)
-  (let* ((start-production (grammar-start-production grammar))
-	 (first-map (compute-first grammar k)))
+  (let ((start-production (grammar-start-production grammar))
+	(first-map (compute-first grammar k)))
 
     (cps-parse
      grammar
