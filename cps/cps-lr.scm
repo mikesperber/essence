@@ -74,11 +74,9 @@
 		    (attribute-value
 		     (apply-attribution
 		      attribution
-		      (c-list->list
-		       (c-reverse
-			(c-cons #f
-				(c-take (- rhs-length 1)
-					attribute-values)))))))
+		      (c-cons #f
+			      (c-take (- rhs-length 1)
+				      attribute-values)))))
 	       (recover attribute-value)))
 
 	   (_memo
@@ -105,9 +103,7 @@
 	      (attribute-value
 	       (apply-attribution
 		attribution
-		(c-list->list
-		 (c-reverse
-		  (c-take rhs-length attribute-values))))))
+		(c-take rhs-length attribute-values))))
 
 	 ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
 				   shift-nonterminal)
@@ -180,4 +176,5 @@
 (define-primitive cons - pure)
 
 (define (apply-attribution a l)
-  (apply (eval a (interaction-environment)) l))
+  (_memo
+   (apply (eval a (interaction-environment)) (c-list->list (c-reverse l)))))
