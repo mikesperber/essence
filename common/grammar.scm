@@ -332,7 +332,7 @@
     follow-map))
 
 ;;; perform
-;;; follow (k, A) = U { first (k, beta follow (k, B)) | B -> alpha A beta }
+;;; follow (k, A) = follow (k, A) u U { first (k, beta follow (k, B)) | B -> alpha A beta }
 ;;; by iterating over the right sides of all productions, updating the
 ;;; follow-set as appropriate
 
