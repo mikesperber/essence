@@ -6,7 +6,7 @@
 
 (define (complete-subsets! for-each-a a-equal? for-each-R
 			   associate-depth! depth-association
-			   f-association merge!)
+			   merge!)
   (let ((stack '())
 	(depth 0))
 
@@ -29,7 +29,7 @@
 	    (depth-min (depth-association a)
 		       (depth-association b)))
 	 
-	   (merge! (f-association a) (f-association b)))
+	   (merge! a b))
 	 a)
       
 	(if (= (depth-association a) depth)
@@ -43,4 +43,3 @@
     (for-each-a (lambda (a)
 		  (if (eqv? 0 (depth-association a))
 		      (descend! a))))))
-	      
