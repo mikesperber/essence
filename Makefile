@@ -4,6 +4,8 @@ include Makefile.config
 
 direct:
 	cd direct; $(MAKE)
+direct_gambit:
+	cd direct; $(MAKE) gambit
 
 examples: examples_direct
 examples_direct: direct
@@ -13,7 +15,7 @@ examples_gambit:
 
 
 benchmarks: examples common
-benchmarks_gambit: examples_gambit common_gambit
+benchmarks_gambit: examples_gambit common_gambit direct_gambit
 	cd benchmarks; $(MAKE) gambit
 
 common:
