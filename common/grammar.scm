@@ -260,6 +260,15 @@
 
 ; Follow set computation
 
+(define (follow-map-equal? fm-1 fm-2)
+  (let loop ((fm-1 fm-1))
+    (or (null? fm-1)
+	(let* ((nonterm-1 (caar fm-1))
+	       (first-1 (cdar fm-1))
+	       (first-2 (cdr (assoc nonterm-1 fm-2))))
+	  (and (first-equal? first-1 first-2)
+	       (loop (cdr fm-1)))))))
+
 (define (initial-follow-map grammar)
   ;; start symbol must be followed by the empty string to get off the
   ;; ground
@@ -320,7 +329,7 @@
   ;; fixpoint iteration
   (let loop ((follow-map (initial-follow-map grammar)))
     (let ((new-follow-map (next-follow-map grammar k first-map follow-map)))
-      (if (first-map-equal? follow-map new-follow-map)
+      (if (follow-map-equal? follow-map new-follow-map)
 	  follow-map
 	  (loop new-follow-map)))))
 
