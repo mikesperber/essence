@@ -7,15 +7,18 @@
 	  (define-primitive :syntax)))
 
 (define-interface source-grammar-interface
-  (export source-grammar-terminals source-grammar-nonterminals
-	  source-grammar-rules source-grammar-start
-	  source-grammar-has-terminal-attribution?
-	  source-grammar-terminal-attribution
-	  first-nonterminal-index 
-	  list-position make-list
-	  terminal->index make-list
-	  eoi-terminal
-	  error-terminal))
+  (export (source-grammar-terminals (proc (:values) :values))
+	  (source-grammar-nonterminals (proc (:values) :values))
+	  (source-grammar-rules (proc (:values) :values))
+	  (source-grammar-start  (proc (:values) :values))
+	  (source-grammar-has-terminal-attribution? (proc (:values) :boolean))
+	  (source-grammar-terminal-attribution (proc (:values) :values))
+	  (first-nonterminal-index :number)
+	  (list-position (proc (:values :values) :number))
+	  (make-list (proc (:number :values) :values))
+	  (terminal->index (proc (:values :values) :number))
+	  (eoi-terminal :number)
+	  (error-terminal :number)))
   
 (define-interface lr-runtime-interface
   (export eoi-terminal
