@@ -113,6 +113,12 @@
     (lambda (nonterminal)
       (vector-ref nullable-vector nonterminal))))
 
+(define (sequence-nullable? sequence grammar nullable?)
+  (not (any? (lambda (symbol)
+	       (or (terminal? symbol grammar)
+		   (not (nullable? symbol))))
+	     sequence)))
+
 ; First set computation
 
 (define (sf-first rhs k grammar first-map)
@@ -176,11 +182,81 @@
 
 (define (compute-first grammar k)
   ;; fixpoint iteration
-  (let loop ((first-map (initial-first-map grammar)))
-    (let ((new-first-map (next-first-map grammar k first-map)))
-      (if (first-map-equal? first-map new-first-map)
-	  first-map
-	  (loop new-first-map)))))
+  (if (= 1 k)
+      (compute-first-1 grammar)
+      (let loop ((first-map (initial-first-map grammar)))
+	(let ((new-first-map (next-first-map grammar k first-map)))
+	  (if (first-map-equal? first-map new-first-map)
+	      first-map
+	      (loop new-first-map))))))
+
+; first_1 computation
+
+(define (compute-first-1 grammar)
+  (let ((nullable? (compute-nullable? grammar))
+	(first-map (make-vector (grammar-number-of-nonterminals grammar) '()))
+	(depths (make-vector (grammar-number-of-nonterminals grammar) 0)))
+    
+    (define (for-each-nonterminal f)
+      (for-each f (grammar-nonterminals grammar)))
+
+    ;; each Y with X -> \alpha Y \beta with \alpha nullable
+    (define (initial-symbols lhs)
+      (let production-loop ((productions (productions-with-lhs lhs grammar))
+			    (symbols '()))
+	(if (not (null? productions))
+	    (let loop ((rhs-rest (production-rhs (car productions)))
+		       (symbols symbols))
+	      (if (not (null? rhs-rest))
+		  (let* ((symbol (car rhs-rest))
+			 (visited? (or (= lhs symbol)
+				       (memv symbol symbols)))
+			 (symbols (if visited?
+				      symbols
+				      (cons symbol symbols))))
+		    (if (and (nonterminal? symbol grammar)
+			     (nullable? symbol))
+			(loop (cdr rhs-rest) symbols)
+			(production-loop (cdr productions) symbols)))
+		  (production-loop (cdr productions) symbols)))
+	    symbols)))
+
+    (define (for-each-induction f lhs)
+      (for-each f
+		(filter (lambda (symbol)
+			  (nonterminal? symbol grammar))
+			(initial-symbols lhs))))
+
+    (define (associate-depth! nonterminal depth)
+      (vector-set! depths nonterminal depth))
+    
+    (define (depth-association nonterminal)
+      (vector-ref depths nonterminal))
+
+    (define (merge-firsts! lhs nonterminal)
+      (vector-set! first-map lhs
+		   (union (vector-ref first-map lhs)
+			  (vector-ref first-map nonterminal))))
+
+    (for-each
+     (lambda (nonterminal)
+       (let ((initial (filter-map
+		       (lambda (symbol)
+			 (and (terminal? symbol grammar)
+			      (cons symbol '())))
+		       (initial-symbols nonterminal))))
+	 (vector-set! first-map nonterminal
+		      (if (nullable? nonterminal)
+			  (cons '() initial)
+			  initial))))
+     (grammar-nonterminals grammar))
+
+    (complete-subsets! for-each-nonterminal
+		       =
+		       for-each-induction
+		       associate-depth! depth-association
+		       merge-firsts!)
+    first-map))
 
 ; Follow set computation
 
