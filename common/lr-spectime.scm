@@ -6,6 +6,8 @@
 
 ; LR items
 
+; They must be distinguishable from pairs.
+
 (define (make-item prod pos la)
   (vector prod pos la))
 (define (item-production item)
@@ -87,9 +89,8 @@
 		      (let ((new-items
 			     (initial-items
 			      lhs
-			      (restricted-append k
-						 (cdr rhs-rest)
-						 (item-lookahead item)))))
+			      (append (cdr rhs-rest)
+				      (item-lookahead item)))))
 			(loop (cdr item-set)
 			      (items-merge new-items predict-set))))))))))
 
@@ -242,78 +243,17 @@
        (else
 	(loop (cdr item-set)))))))
 
-; Lookahead tries
-
-; trie of depth k: k nested alists
-; needs at least one item
-
-(define (build-trie items)
-  (if (null? items)
-      '()
-      (let* ((item (car items))
-	     (items (cdr items))
-	     (trie (let loop ((la (item-lookahead item)))
-		     (if (null? la)
-			 item
-			 (list (cons (car la) (loop (cdr la))))))))
-	(let loop ((items items) (trie trie))
-	  (if (null? items)
-	      trie
-	      (loop (cdr items)
-		    (let loop ((la (item-lookahead (car items))) (trie trie))
-		      (if (null? la)
-			  (car items)
-			  (let ((car-la (car la)))
-			    (let inner-loop ((trie trie))
-			      (if (null? trie)
-				  (list (cons car-la (loop (cdr la) '())))
-				  (if (equal? car-la (caar trie))
-				      (cons (cons car-la (loop (cdr la) (cadr trie)))
-					    (cdr trie))
-				      (cons (car trie)
-					    (inner-loop (cdr trie)))))))))))))))
-
-(define (sort-trie trie k)
-  (let ((subject
-	 (if (> k 1)
-	     (map (lambda (p) (cons (car p) (sort-trie (cdr p) (- k 1)))) trie)
-	     trie)))
-    (sort-list subject
-	       (lambda (p q)
-		 (< (car p) (car q))))))
-
-(define (collapse-trie trie k)
-  (if (null? trie)
-      '()
-      (let ((subject
-	     (if (> k 1)
-		 (map (lambda (p) (cons (car p) (collapse-trie (cdr p) (- k 1)))) trie)
-		 trie)))
-	(let loop ((first (car subject)) (rest (cdr subject)))
-	  (let* ((first-la (car first))
-		 (first-trie (cdr first))
-		 (yes/no (partition-list (lambda (p) (equal? first-trie (cdr p))) rest))
-		 (yes (car yes/no))
-		 (no (cdr yes/no)))
-	    (cons (cons (cons first-la (map car yes)) first-trie)
-		  (if (null? no)
-		      '()
-		      (loop (car no) (cdr no)))))))))
-
-(define (items->trie item-set k)
-  (collapse-trie (sort-trie (build-trie item-set) k) k))
-
 ; List utilities
 
 (define (flatten l)
   (apply append l))
 
 (define (take n l)
+  (let loop ((n n) (l l) (result '()))
     (cond
      ((or (zero? n) (null? l))
-      '())
-     (else
-      (cons (car l) (take (- n 1) (cdr l))))))
+      (reverse result))
+     (loop (- n 1) (cdr l) (cons (car l) result)))))
 
 (define (restricted-append k l1 l2)
   (if (null? l1)
