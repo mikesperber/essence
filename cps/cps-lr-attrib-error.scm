@@ -175,6 +175,7 @@
 	(loop (c-cdr l) (c-cons (c-car l) r)))))
 
 (define-primitive apply - apply)
+(define-primitive cons - pure)
 
 (define (apply-attribution a l)
   (apply (eval a (interaction-environment)) l))
