@@ -81,16 +81,6 @@
 	    (cont (car set))
 	    (loop (cdr set))))))
 
-(define (select-lookahead-item-the-trick item-set k input cont fail)
-  (let ((input-front (take k input)))
-    (let loop ((item-set item-set))
-      (if (null? item-set)
-	  (fail)
-	  (let ((item (car item-set)))
-	    (if (equal? input-front (item-lookahead item))
-		(cont item)
-		(loop (cdr item-set))))))))
-
 (define (c-take n l)
   (if (zero? n)
       (c-nil)
