@@ -15,4 +15,10 @@
 (define (stream-empty? stream)
   (null? (force stream)))
 
-	 
+(define (list->stream l)
+  (make-stream
+   (lambda (l)
+     (if (not (null? l))
+	 l				; it just works out that way	 
+	 #f))
+   l))
