@@ -27,33 +27,25 @@
        (cond
 	((not (and (initial? state grammar)
 		   (equal? (grammar-start grammar) nonterminal)))
-	 (the-trick-cannot-fail
-	  nonterminal the-next-nonterminals
-	  (lambda (symbol) (shift symbol input))))
+	 (shift
+	  (the-member nonterminal the-next-nonterminals)
+	  input))
 	(else 'accept)))
-     
-     (define (shift-terminal terminal input fail)
-       (the-trick
-	terminal (next-terminals closure grammar)
-	(lambda (symbol) (shift symbol input))
-	fail))
 
-     (define (try-reduce)
-       (select-lookahead-item
-	(accept closure) k input
-	(lambda (item)
-	  ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
-				    shift-nonterminal)
-			       continuations)
-		       (length (item-rhs item)))
-	   (item-lhs item) input))
-	(lambda () 'lookahead-error)))
-
-     (if (not (stream-empty? input))
-	 (shift-terminal
-	  (car (stream-car input)) (stream-cdr input)
-	  try-reduce)
-	 (try-reduce)))))
+     (cond
+      ((maybe-the-member (and (not (stream-empty? input))
+			      (car (stream-car input)))
+			 (next-terminals closure grammar))
+       => (lambda (symbol)
+	    (shift symbol (stream-cdr input))))
+      ((find-lookahead-item (accept closure) k input)
+       => (lambda (item)
+	    ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
+				      shift-nonterminal)
+				 continuations)
+			 (length (item-rhs item)))
+	     (item-lhs item) input)))
+      (else 'error)))))
 
 (define (parse grammar k method input)
   (let* ((start-production (grammar-start-production grammar))

@@ -1,15 +1,15 @@
-(define-without-memoization (the-trick element set cont fail)
+(define-without-memoization (maybe-the-member element set)
   (let loop ((set set))
-    (if (null? set)
-	(fail)
-	(if (equal? element (car set))
-	    (cont (car set))
-	    (loop (cdr set))))))
+    (cond
+     ((null? set) #f)
+     ((equal? element (car set))
+      (car set))
+     (else
+      (loop (cdr set))))))
 
-(define-without-memoization (the-trick-cannot-fail element set cont)
+(define-without-memoization (the-member element set)
   (let loop ((set set))
-    (if (null? (cdr set))
-	(cont (car set))
-	(if (equal? element (car set))
-	    (cont (car set))
-	    (loop (cdr set))))))
+    (cond
+     ((null? (cdr set)) (car set))
+     ((equal? element (car set)) (car set))
+     (else (loop (cdr set))))))

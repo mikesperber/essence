@@ -9,11 +9,11 @@
      (else #f))))
 
 (define-without-memoization
-  (select-lookahead-item item-set k input cont fail)
+  (find-lookahead-item item-set k input)
   (let loop ((item-set item-set))
     (if (null? item-set)
-	(fail)
+	#f
 	(let ((item (car item-set)))
 	  (if (lookahead-matches? k (item-lookahead item) input)
-	      (cont item)
+	      item
 	      (loop (cdr item-set)))))))
