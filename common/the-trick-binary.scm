@@ -40,7 +40,6 @@
 
 (define (take n l)
   (let loop ((n n) (l l) (result '()))
-    (cond
-     ((or (zero? n) (null? l))
-      (reverse result))
-     (loop (- n 1) (cdr l) (cons (car l) result)))))
+    (if (or (zero? n) (null? l))
+	(reverse result)
+	(loop (- n 1) (cdr l) (cons (car l) result)))))
