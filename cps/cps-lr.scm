@@ -1,6 +1,10 @@
 ;; Essential LR parsing (continuation-based)
 ;; =========================================
 
+(define-data c-list
+  (c-cons c-car c-cdr)
+  (c-nil))
+
 (define (parse grammar k first-map state continuations input)
   (if (and (final? state grammar)
            (equal? '$ (car input)))
@@ -14,9 +18,9 @@
 	     (let ((next-state (goto closure symbol)))
 	       (parse grammar k first-map
 		      next-state
-		      (cons shift-nonterminal
-			    (take (- (active next-state) 1)
-				  continuations))
+		      (c-cons shift-nonterminal
+			      (c-take (- (active next-state) 1)
+				      continuations))
 		      input)))))
 
 	(define (shift-terminal terminal input fail)
@@ -26,9 +30,9 @@
 	     (let ((next-state (goto closure symbol)))
 	       (parse grammar k first-map
 		      next-state
-		      (cons shift-nonterminal
-			    (take (- (active next-state) 1)
-				  continuations))
+		      (c-cons shift-nonterminal
+			      (c-take (- (active next-state) 1)
+				      continuations))
 		      input)))
 	   fail))
 
@@ -39,8 +43,8 @@
 	     (select-lookahead-item-the-trick
 	      accept-items k input
 	      (lambda (item)
-		((list-ref (cons shift-nonterminal continuations)
-			   (length (item-rhs item)))
+		((c-list-ref (c-cons shift-nonterminal continuations)
+			     (length (item-rhs item)))
 		 (item-lhs item) input))
 	      (lambda () 'error))))))))
 
@@ -56,7 +60,7 @@
 	   (list (make-item start-production
 			    0
 			    (cdr (production-rhs start-production))))
-	   '()
+	   (c-nil)
 	   (append input (make-$ k)))))
 
 ;; ~~~~~~~~~~~~
@@ -87,7 +91,12 @@
 		(cont item)
 		(loop (cdr item-set))))))))
 
-(define (take n l)
+(define (c-take n l)
   (if (zero? n)
-      '()
-      (cons (car l) (take (- n 1) (cdr l)))))
+      (c-nil)
+      (c-cons (c-car l) (c-take (- n 1) (c-cdr l)))))
+
+(define (c-list-ref l n)
+  (if (zero? n)
+      (c-car l)
+      (c-list-ref (c-cdr l) (- n 1))))
