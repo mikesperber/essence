@@ -1,0 +1,112 @@
+; Essential LR parsing in direct style
+; ====================================
+
+(loadt "../common/util.adt")
+(loadt "../common/grammar.adt")
+
+;;; primitives
+
+(defprim (parse-result the-lhs the-dot the-inp)
+  (vector the-lhs the-dot the-inp))
+(defprim (result-lhs result)
+  (vector-ref result 0))
+(defprim (result-dot result)
+  (vector-ref result 1))
+(defprim (result-inp result)
+  (vector-ref result 2))
+
+;;; utilities
+
+(define (filter-2 pred? list)
+  (filter-20 pred? list '()))
+(define (filter-20 pred? rest result)
+  (if (null? rest)
+      (reverse result)
+      (filter-20 pred?
+		 (cdr rest)
+		 (if (pred? (car rest))
+		     (cons (car rest) result)
+		     result))))
+
+;; the trick need be applied to all calls of parse-bar!
+
+(define (direct-parse grammar k first-map state
+		      input)
+  (if (and (final? state grammar)
+	   (equal? '$ (car input)))
+      'success
+      (let* ((closure (compute-closure state grammar k first-map))
+	     (accept-items (accept closure)))
+	
+	(if (null? accept-items)
+	    ;; shift-terminal
+	    (parse-bar grammar k first-map closure (car input) (cdr input))
+	    (let ((item (select-lookahead-item accept-items k input)))
+	      (if (not item)
+		  ;; shift-terminal
+		  (parse-bar grammar k first-map closure (car input) (cdr input))
+		  (let* ((rhs-length (length (item-rhs item)))
+			 (lhs (item-lhs item)))
+		    
+		    ;; reduce, then shift on lhs
+		    (if (zero? rhs-length)
+			;; shift-nonterminal
+			(parse-bar grammar k first-map closure lhs input)
+			(parse-result lhs rhs-length input)))))))))
+
+(define (parse-bar grammar k first-map closure sym input)
+  (let* ((next-state (goto closure sym))
+	 (result (direct-parse grammar k first-map next-state input)))
+    (if (final? next-state grammar)
+	'success
+	(let* ((the-lhs (result-lhs result))
+	       (the-dot (result-dot result))
+	       (the-inp (result-inp result)))
+	  (if (< 1 the-dot)
+	      (parse-result the-lhs (- the-dot 1) the-inp)
+	      (parse-bar grammar k first-map closure the-lhs the-inp))))))
+
+(define (direct-parse-main source-grammar k input)
+  (let* ((grammar (source-grammar->grammar source-grammar k))
+	 (start-production (car (grammar-productions grammar))))
+    (direct-parse grammar
+		  k
+		  (compute-first grammar k)
+		  (list
+		   (make-item start-production
+			      0
+			      (cdr (production-rhs start-production))))
+		  input)))
+
+(define (select-lookahead-item item-set k input)
+  (select-lookahead-item1 item-set 0 k input))
+(define (select-lookahead-item1 item-set pos k input)
+  (if (= pos k)
+	(if (null? item-set) #f (car item-set))	; RETURN
+	(if (null? item-set)
+	    #f					; RETURN
+	    (select-lookahead-item2 item-set pos k input
+				    (car input) item-set '()))))
+(define (select-lookahead-item2 item-set pos k input
+				t items used-lookaheads)
+  (if (null? items)
+      #f				; RETURN
+      (let* ((item (car items))
+	     (kth-lookahead (list-ref (item-lookahead item) pos)))
+	(if (member kth-lookahead used-lookaheads)
+	    (select-lookahead-item2 item-set pos k input
+				    t (cdr items) used-lookaheads)
+	    (if (equal? t kth-lookahead)
+		(select-lookahead-item1
+		 (filter-2 (lambda (item)
+			     (equal?
+			      (list-ref (item-lookahead item) pos)
+			      kth-lookahead))
+			   item-set)
+		 (+ pos 1)
+		 k
+		 (if (= (+ 1 pos) k)
+		     '() ; so as to not touch (stream-cdr input)
+		     (cdr input)))
+		(select-lookahead-item2 item-set pos k input
+					t (cdr items) (cons kth-lookahead used-lookaheads)))))))
