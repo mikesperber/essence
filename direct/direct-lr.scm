@@ -2,13 +2,19 @@
 ;; ===================================
 
 (define (parse grammar k first-map state input)
-  (let ((closure (compute-closure state grammar k first-map)))
+  (_memo
+   (let ((closure (compute-closure state grammar k first-map)))
 
-    (if (and (final? state grammar)
-	     (equal? '$ (car input)))
-	'accept
-	(or (parse-bar grammar k first-map closure
-		       (car input) (cdr input))
+     (if (final? state grammar)
+	 (if (equal? '$ (car input))
+	     'accept
+	     (_error "parse error"))
+	 (the-trick
+	  (car input) (next-terminals closure grammar)
+	  (lambda (symbol)
+	    (parse-bar grammar k first-map closure
+		       symbol (cdr input)))
+	  (lambda ()
 	    (select-lookahead-item
 	     (accept closure) k input
 	     (lambda (item)
@@ -18,21 +24,25 @@
 		     (parse-bar grammar k first-map closure lhs input)
 		     (parse-result lhs rhs-length input))))
 	     (lambda ()
-	       (error "parse error")))))))
+	       (_error "parse error")))))))))
 
 (define (parse-bar grammar k first-map closure symbol input)
-  (let* ((next-state (goto closure symbol)))
-    (and (not (null? next-state))
-	 (let ((result
-		(parse grammar k first-map next-state input)))
-	   (if (final? next-state grammar)
-	       result
-	       (let* ((lhs (result-lhs result))
-		      (dot (result-dot result))
-		      (inp (result-inp result)))
-		 (if (> dot 1)
-		     (parse-result lhs (- dot 1) inp)
-		     (parse-bar grammar k first-map closure lhs inp))))))))
+  (let* ((next-state (goto closure symbol))
+	 (result (parse grammar k first-map next-state input)))
+    (if (final? next-state grammar)
+	result
+	(let* ((lhs (result-lhs result))
+	       (dot (result-dot result))
+	       (inp (result-inp result))
+	       (nts (next-nonterminals closure grammar)))
+	  (cond ((null? nts) (parse-result lhs (- dot 1) inp))
+		((> dot 1) (parse-result lhs (- dot 1) inp))
+		(else
+		 (the-trick-cannot-fail
+		  lhs (next-nonterminals closure grammar)
+		  (lambda (symbol)
+		    (parse-bar grammar k first-map closure 
+			       symbol inp)))))))))
 
 ;; ~~~~~~~~~~~~
 
