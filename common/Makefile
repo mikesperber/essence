@@ -4,7 +4,10 @@ all:
 .PHONY: all gambit
 
 gambit: $(runtime_support:.scm=-gambit.o) \
-	extract-terminals
+	extract-terminals \
+	r5rs-gambit-gambit.o \
+	big-gambit-gambit.o \
+	tiny-format-gambit.o
 
 extract-terminals-batch.scm: extract-terminals.scm
 	(echo "(extract-terminals (vector-ref ##argv 1) (vector-ref ##argv 2))"; \
