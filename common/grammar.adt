@@ -243,7 +243,14 @@
 	     (not (member item items-1)))
 	   items-2)))
 
-(defprim (compute-closure state grammar k first-map)
+(define (predict-equal? is-1 is-2)
+      (and (= (length is-1) (length is-2))
+	   (let loop ((is-1 is-1))
+	     (or (null? is-1)
+		 (and (member (car is-1) is-2)
+		      (loop (cdr is-1)))))))
+
+(defprim (compute-lr-closure state grammar k first-map)
 
   (let ((foobar 'dummy)) ; AKA Similix sucks
 
@@ -276,20 +283,17 @@
 			  (loop (cdr item-set)
 				(items-merge new-items predict-set))))))))))
 
-    (define (predict-equal? is-1 is-2)
-      (and (= (length is-1) (length is-2))
-	   (let loop ((is-1 is-1))
-	     (or (null? is-1)
-		 (and (member (car is-1) is-2)
-		      (loop (cdr is-1)))))))
-
     (let loop ((predict-set state))
       (let ((new-predict-set (next-predict predict-set)))
 	(if (predict-equal? predict-set new-predict-set)
 	    predict-set
 	    (loop new-predict-set))))))
 
-(defprim (compute-sorted-closure state grammar k first-map)
+;; For historical reasons ...
+
+(defprim compute-closure compute-lr-closure)
+
+(defprim (compute-sorted-lr-closure state grammar k first-map)
 
   (let ((foobar 'dummy)) ; we know this one ...
 
@@ -324,6 +328,36 @@
 		  (items-append next predict-set))))))
 
     (predict state)))
+
+(defprim (compute-slr-closure state grammar k follow-map)
+
+    (define (initial-items symbol)
+      (add-slr-lookahead
+       (map (lambda (production)
+	      (make-item production 0 #f))
+	    (productions-with-lhs symbol grammar))
+       follow-map))
+
+    (define (next-predict item-set)
+      (let loop ((item-set item-set) (predict-set item-set))
+	(if (null? item-set)
+	    predict-set
+	    (let* ((item (car item-set))
+		   (rhs-rest (item-rhs-rest item)))
+	      (if (null? rhs-rest)
+		  (loop (cdr item-set) predict-set)
+		  (let ((lhs (car rhs-rest)))
+		    (if (terminal? lhs grammar)
+			(loop (cdr item-set) predict-set)
+			(let ((new-items (initial-items lhs)))
+			  (loop (cdr item-set)
+				(items-merge new-items predict-set))))))))))
+
+    (let loop ((predict-set state))
+      (let ((new-predict-set (next-predict predict-set)))
+	(if (predict-equal? predict-set new-predict-set)
+	    predict-set
+	    (loop new-predict-set)))))
 
 (defprim (goto-sorted state-closure symbol)
   (map item-shift
@@ -616,28 +650,30 @@
 ;;; trie of depth k: k nested alists
 ;;; needs at least one item
 (defprim (build-trie items)
-  (let* ((item (car items))
-	 (items (cdr items))
-	 (trie (let loop ((la (item-lookahead item)))
-		 (if (null? la)
-		     (item-production item)
-		     (list (cons (car la) (loop (cdr la))))))))
-    (let loop ((items items) (trie trie))
-      (if (null? items)
-	  trie
-	  (loop (cdr items)
-		(let loop ((la (item-lookahead (car items))) (trie trie))
-		  (if (null? la)
-		      (item-production (car items))
-		      (let ((car-la (car la)))
-			(let inner-loop ((trie trie))
-			  (if (null? trie)
-			      (list (cons car-la (loop (cdr la) '())))
-			    (if (equal? car-la (caar trie))
-				(cons (cons car-la (loop (cdr la) (cadr trie)))
-				      (cdr trie))
-				(cons (car trie)
-				      (inner-loop (cdr trie))))))))))))))
+  (if (null? items)
+      '()
+      (let* ((item (car items))
+	     (items (cdr items))
+	     (trie (let loop ((la (item-lookahead item)))
+		     (if (null? la)
+			 item
+			 (list (cons (car la) (loop (cdr la))))))))
+	(let loop ((items items) (trie trie))
+	  (if (null? items)
+	      trie
+	      (loop (cdr items)
+		    (let loop ((la (item-lookahead (car items))) (trie trie))
+		      (if (null? la)
+			  (car items)
+			  (let ((car-la (car la)))
+			    (let inner-loop ((trie trie))
+			      (if (null? trie)
+				  (list (cons car-la (loop (cdr la) '())))
+				  (if (equal? car-la (caar trie))
+				      (cons (cons car-la (loop (cdr la) (cadr trie)))
+					    (cdr trie))
+				      (cons (car trie)
+					    (inner-loop (cdr trie)))))))))))))))
 
 (defprim (sort-trie trie k)
   (let ((subject
@@ -649,20 +685,22 @@
 			       (symbol->string (car q)))) subject)))
 
 (defprim (collapse-trie trie k)
-  (let ((subject
-	 (if (> k 1)
-	     (map (lambda (p) (cons (car p) (collapse-trie (cdr p) (- k 1)))) trie)
-	     trie)))
-    (let loop ((first (car subject)) (rest (cdr subject)))
-      (let* ((first-la (car first))
-	     (first-trie (cdr first))
-	     (yes/no (partition-list (lambda (p) (equal? first-trie (cdr p))) rest))
-	     (yes (car yes/no))
-	     (no (cdr yes/no)))
-	(cons (cons (cons first-la (map car yes)) first-trie)
-	      (if (null? no)
-		  '()
-		  (loop (car no) (cdr no))))))))
+  (if (null? trie)
+      '()
+      (let ((subject
+	     (if (> k 1)
+		 (map (lambda (p) (cons (car p) (collapse-trie (cdr p) (- k 1)))) trie)
+		 trie)))
+	(let loop ((first (car subject)) (rest (cdr subject)))
+	  (let* ((first-la (car first))
+		 (first-trie (cdr first))
+		 (yes/no (partition-list (lambda (p) (equal? first-trie (cdr p))) rest))
+		 (yes (car yes/no))
+		 (no (cdr yes/no)))
+	    (cons (cons (cons first-la (map car yes)) first-trie)
+		  (if (null? no)
+		      '()
+		      (loop (car no) (cdr no)))))))))
 
 (defprim (items->trie item-set k)
   (collapse-trie (sort-trie (build-trie item-set) k) k))
