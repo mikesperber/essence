@@ -9,8 +9,9 @@
 	  big-util)
     (begin
       (define (generate-parser grammar lookahead method goal-name)
-	(gensym-ignore-name-stubs!)
+	; (gensym-ignore-name-stubs!)
 	(set-generate-flat-program! #t)
+	(set-lambda-is-pure! #f)
 	(specialize compute-parser
 		    '(compute-parser 0 0 0 1)
 		    (list grammar lookahead method 'input)
@@ -18,7 +19,7 @@
 	(append (filter (lambda (form)	; massive kludge
 			  (not (eq? 'define-data (car form))))
 			*support-code*)
-		*residual-program*))))
+		(get-residual-program)))))
 
   generate-structures)
 
