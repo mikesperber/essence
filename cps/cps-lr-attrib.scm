@@ -5,7 +5,6 @@
   (c-cons c-car c-cdr)
   (c-nil))
 
-(define-memo _memo 1)
 (define-primitive error - error)
 
 (define-without-memoization

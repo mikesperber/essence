@@ -5,8 +5,6 @@
   (c-cons c-car c-cdr)
   (c-nil))
 
-(define-memo _memo 1)
-
 (define-without-memoization
   (cps-parse grammar k compute-closure state continuations input)
   (_memo

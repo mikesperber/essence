@@ -80,19 +80,28 @@
   (files (common lookahead)
 	 (direct direct-lr-naive)))
 
-(define-structure ds-lr parser-interface
+(define-structure ds-lr-vanilla parser-interface
   (open scheme signals grammar lr-spectime stream
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
-	 (direct direct-lr)))
+	 (common memo)
+	 (direct direct-lr-vanilla)))
 
 (define-structure ds-lr-imperative parser-interface
   (open scheme signals grammar lr-spectime stream
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
+	 (common memo)
 	 (direct direct-lr-imperative)))
+
+(define-structure ds-lr parser-interface
+  (open scheme signals grammar lr-spectime stream
+	cogen-directives)
+  (files (common the-trick)
+	 (common lookahead)
+	 (direct direct-lr)))
 
 (define-structure cps-lr-naive parser-interface
   (open scheme signals grammar lr-spectime stream
@@ -105,6 +114,7 @@
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
+	 (common memo)
 	 (cps cps-lr-vanilla)))
 
 (define-structure cps-lr-attrib parser-interface
@@ -112,6 +122,7 @@
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
+	 (common memo)
 	 (cps cps-lr-attrib)))
 
 (define-structure cps-lr-attrib-error parser-interface
@@ -119,6 +130,7 @@
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
+	 (common memo)
 	 (cps cps-lr-attrib-error)))
 
 (define-structure cps-lr parser-interface
@@ -126,4 +138,5 @@
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
+	 (common memo)
 	 (cps cps-lr)))
