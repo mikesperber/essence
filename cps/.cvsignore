@@ -1,6 +1,8 @@
 cps-lr-d0.scm
 cps-lr-d1.scm
 cps-lr-d2.scm
+cps-lr-genext.config.scm
+cps-lr-genext.scm
 cps-lr-schism.ana
 cps-lr-schism.ana.color
 cps-lr-schism.ana.plain
