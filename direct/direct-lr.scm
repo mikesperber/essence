@@ -6,7 +6,7 @@
    (let ((closure (compute-closure state grammar)))
 
      (if (final? state grammar)
-	 (if (equal? '$ (car input))
+	 (if (equal? eoi-terminal (car input))
 	     'accept
 	     (_error "parse error"))
 	 (the-trick
@@ -48,8 +48,7 @@
 
 (define (do-parse source-grammar k method input)
   (let* ((grammar (source-grammar->grammar source-grammar k))
-	 (start-production
-	   (car (grammar-productions grammar)))
+	 (start-production (grammar-start-production grammar))
 	 (first-map (compute-first grammar k)))
 
     (cond
@@ -61,7 +60,7 @@
 	     (list (make-item start-production
 			      0
 			      (cdr (production-rhs start-production))))
-	     (append input (make-$ k))))
+	     input))
      ((equal? method 'slr)
       (let ((follow-map (compute-follow grammar k first-map)))
 	(parse grammar
@@ -70,5 +69,5 @@
 		 (compute-slr-closure state grammar k follow-map))
 	       (add-slr-lookahead (list (make-item start-production 0 #f))
 				  follow-map)
-	       (append input (make-$ k))))))))
+	       input))))))
 

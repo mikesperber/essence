@@ -9,7 +9,7 @@
   (parse grammar k compute-closure state continuations input)
   (_memo
    (if (final? state grammar)
-       (if (equal? '$ (car input))
+       (if (equal? eoi-terminal (car input))
 	   'accept
 	   'error)
        (let* ((closure (compute-closure state grammar))
@@ -53,8 +53,7 @@
 
 (define (do-parse source-grammar k method input)
   (let* ((grammar (source-grammar->grammar source-grammar k))
-	 (start-production
-	   (car (grammar-productions grammar)))
+	 (start-production (grammar-start-production grammar))
 	 (first-map (compute-first grammar k)))
 
     (cond
@@ -67,7 +66,7 @@
 			      0
 			      (cdr (production-rhs start-production))))
 	     (c-nil)
-	     (append input (make-$ k))))
+	     input))
      ((equal? method 'slr)
       (let ((follow-map (compute-follow grammar k first-map)))
 	(parse grammar
@@ -77,7 +76,7 @@
 	       (add-slr-lookahead (list (make-item start-production 0 #f))
 				  follow-map)
 	       (c-nil)
-	       (append input (make-$ k))))))))
+	       input))))))
 
 ;; ~~~~~~~~~~~~
 
