@@ -6,4 +6,4 @@
    ((zero? error-status) input)
    ((stream-empty? input)
     (error "parse error: premature end of input"))
-   (else (stream-cdr input)))
+   (else (stream-cdr input))))
