@@ -13,7 +13,8 @@
 		   handle-error error-status
 		   input)
   (_memo
-   (let* ((closure (compute-closure state))
+   (let* ((closure (compute-closure state grammar k))
+	  (accept-items (accept closure))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
      (define (shift symbol attribute-value error-status input)
@@ -47,7 +48,8 @@
      (define (handle-error-here error-status input)
        (let* ((next-state (goto closure (grammar-error grammar)))
 	      (keep (- (active next-state) 1))
-	      (next-closure (compute-closure next-state))
+	      (next-closure (compute-closure next-state grammar k))
+	      (next-accept-items (accept next-closure))
 	      (input 
 	       (cond
 		((zero? error-status) input)
@@ -68,68 +70,66 @@
 
 	 (let loop ((input input))
 
-	   (define (try-reduce)
-	     (cond
-	      ((find-lookahead-item (accept next-closure) k input)
-	       => (lambda (item)
-		    (let* ((rhs-length (length (item-rhs item)))
-			   (attribution (production-attribution
-					 (item-production item)))
-			   (attribute-value
-			    (apply-attribution
-			     attribution
-			     (c-list->list
-			      (c-reverse
-			       (c-cons #f
-				       (c-take (- rhs-length 1)
-					       attribute-values)))))))
-		      (recover attribute-value input))))
-	      ((stream-empty? input)
-	       (error "parse error: premature end of input"))
-	      (else
-	       (loop (stream-cdr input)))))
+	   (define (reduce-recover item)
+	     (let* ((rhs-length (length (item-rhs item)))
+		    (attribution (production-attribution
+				  (item-production item)))
+		    (attribute-value
+		     (apply-attribution
+		      attribution
+		      (c-list->list
+		       (c-reverse
+			(c-cons #f
+				(c-take (- rhs-length 1)
+					attribute-values)))))))
+	       (recover attribute-value input)))
 
 	   (cond
-	    ((stream-empty? input) (try-reduce))
+	    ((stream-empty? input)
+	     (cond
+	      ((find-eoi-lookahead-item next-accept-items) => reduce-recover)
+	      (else (error "parse error: premature end of input"))))
 	    ((maybe-the-member (car (stream-car input))
 			       (next-terminals next-closure grammar))
 	     => (lambda (symbol)
 		  (recover (cdr (stream-car input)) input)))
-	    (else (try-reduce))))))
+	    ((find-lookahead-item next-accept-items k input)
+	     => reduce-recover)
+	    (else (loop (stream-cdr input)))))))
 
      ;; normal operation
-     (define (reduce)
-       (cond
-	((find-lookahead-item (accept closure) k input)
-	 => (lambda (item)
-	      (let* ((rhs-length (length (item-rhs item)))
-		     (attribution (production-attribution
-				   (item-production item)))
-		     (attribute-value
-		      (apply-attribution
-		       attribution
-		       (c-list->list
-			(c-reverse
-			 (c-take rhs-length attribute-values))))))
+     (define (reduce item)
+       (let* ((rhs-length (length (item-rhs item)))
+	      (attribution (production-attribution
+			    (item-production item)))
+	      (attribute-value
+	       (apply-attribution
+		attribution
+		(c-list->list
+		 (c-reverse
+		  (c-take rhs-length attribute-values))))))
 
-		((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
-					  shift-nonterminal)
-				     continuations)
-			     rhs-length)
-		 (item-lhs item) attribute-value
-		 error-status
-		 input))))
-	(else (handle-error error-status input))))
+	 ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
+				   shift-nonterminal)
+			      continuations)
+		      rhs-length)
+	  (item-lhs item) attribute-value
+	  error-status
+	  input)))
 
      (cond
-      ((stream-empty? input) (reduce))
+      ((stream-empty? input)
+       (cond
+	((find-eoi-lookahead-item accept-items) => reduce)
+	(else (handle-error error-status input))))
       ((maybe-the-member (car (stream-car input))
 			 (next-terminals closure grammar))
        => (lambda (symbol)
 	    (shift symbol (cdr (stream-car input))
 		   (if (zero? error-status) error-status (- error-status 1))
 		   (stream-cdr input))))
-      (else (reduce))))))
+      ((find-lookahead-item accept-items k input) => reduce)
+      (else (handle-error error-status input))))))
 
 (define (parse grammar k method input)
   (let ((start-production (grammar-start-production grammar)))
@@ -137,9 +137,9 @@
     (cps-parse grammar
 	       k
 	       (if (equal? method 'lr)
-		   (lambda (state)
+		   (lambda (state grammar k)
 		     (compute-lr-closure state grammar k))
-		   (lambda (state)
+		   (lambda (state grammar k)
 		     (compute-slr-closure state grammar k)))
 	       (list (make-item start-production 0 '()))
 	       (c-nil)

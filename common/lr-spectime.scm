@@ -263,6 +263,11 @@
 	    (null? (item-rhs-rest item)))
 	  state-closure))
 
+(define (find-eoi-lookahead-item accept-items)
+  (first (lambda (item)
+	   (null? (item-lookahead item)))
+	 accept-items))
+
 (define (initial? state grammar)
   (any? (lambda (item)
 	  (equal? (grammar-start grammar) (item-lhs item)))

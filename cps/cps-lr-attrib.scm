@@ -13,7 +13,8 @@
 	     continuations attribute-values
 	     input)
   (_memo
-   (let* ((closure (compute-closure state))
+   (let* ((closure (compute-closure state grammar k))
+	  (accept-items (accept closure))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
      (define (shift symbol attribute-value input)
@@ -38,35 +39,35 @@
 	((stream-empty? input) attribute-value)
 	(else (error "parse error"))))
 
-     (define (reduce)
-       (cond
-	((find-lookahead-item (accept closure) k input)
-	 => (lambda (item)
-	      (let* ((rhs-length (length (item-rhs item)))
-		     (attribution (production-attribution
-				   (item-production item)))
-		     (attribute-value
-		      (apply-attribution
-		       attribution
-		       (c-list->list
-			(c-reverse
-			 (c-take rhs-length attribute-values))))))
+     (define (reduce item)
+       (let* ((rhs-length (length (item-rhs item)))
+	      (attribution (production-attribution
+			    (item-production item)))
+	      (attribute-value
+	       (apply-attribution
+		attribution
+		(c-list->list
+		 (c-reverse
+		  (c-take rhs-length attribute-values))))))
 
-		((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
-					  shift-nonterminal)
-				     continuations)
-			     rhs-length)
-		 (item-lhs item) attribute-value
-		 input))))
-	(else (error "parse error"))))
+	 ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
+				   shift-nonterminal)
+			      continuations)
+		      rhs-length)
+	  (item-lhs item) attribute-value
+	  input)))
 
      (cond
-      ((stream-empty? input) (reduce))
+      ((stream-empty? input)
+       (cond
+	((find-eoi-lookahead-item accept-items) => reduce)
+	(else (error "parse error"))))
       ((maybe-the-member (car (stream-car input))
 			 (next-terminals closure grammar))
        => (lambda (symbol)
 	    (shift symbol (cdr (stream-car input)) (stream-cdr input))))
-      (else (reduce))))))
+      ((find-lookahead-item accept-items k input) => reduce)
+      (else (error "parse error"))))))
 
 (define (parse grammar k method input)
   (let ((start-production (grammar-start-production grammar)))
@@ -74,9 +75,9 @@
     (cps-parse grammar
 	       k
 	       (if (equal? method 'lr)
-		   (lambda (state)
+		   (lambda (state grammar k)
 		     (compute-lr-closure state grammar k))
-		   (lambda (state)
+		   (lambda (state grammar k)
 		     (compute-slr-closure state grammar k)))
 	       (list (make-item start-production 0 '()))
 	       (c-nil)

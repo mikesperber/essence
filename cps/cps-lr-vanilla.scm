@@ -11,6 +11,7 @@
   (cps-parse grammar k compute-closure state continuations input)
   (_memo
    (let* ((closure (compute-closure state grammar k))
+	  (accept-items (accept closure))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
      (define (shift symbol input)
@@ -44,13 +45,13 @@
      (cond
       ((stream-empty? input)
        (cond
-	((find-eoi-lookahead-item (accept closure)) => reduce)
+	((find-eoi-lookahead-item accept-items) => reduce)
 	(else 'error)))
       ((maybe-the-member (car (stream-car input))
 			 (next-terminals closure grammar))
        => (lambda (symbol)
 	    (shift symbol (stream-cdr input))))
-      ((find-lookahead-item (accept closure) k input) => reduce)
+      ((find-lookahead-item accept-items k input) => reduce)
       (else 'error)))))
 
 (define (parse grammar k method input)

@@ -33,7 +33,7 @@
 (define-interface lr-spectime-interface
   (export compute-lr-closure
 	  compute-slr-closure
-	  goto accept initial? handles-error?
+	  goto accept find-eoi-lookahead-item initial? handles-error?
 	  active next-terminals next-nonterminals
 	  make-item
 	  item-lhs item-rhs item-production item-lookahead

@@ -24,12 +24,3 @@
 	      item
 	      (loop (cdr item-set)))))))
 
-(define-without-memoization
-  (find-eoi-lookahead-item item-set)
-  (let loop ((item-set item-set))
-    (cond
-     ((null? item-set) #f)
-     ((null? (item-lookahead (car item-set)))
-      (car item-set))
-     (else
-      (loop (cdr item-set))))))
