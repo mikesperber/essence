@@ -88,7 +88,7 @@
 					(stream-cdr input)))
 			      (loop-2 (cdr items) (cons kth-lookahead used-lookaheads))))))))))))
 
-(define (handle-conflict! name item-1 item-2)
+(define (handle-conflict! name closure item-1 item-2)
   (_sim-display-immediate name)
   (_sim-display-immediate " conflict in state ")
   (_sim-write-immediate closure)
@@ -112,7 +112,7 @@
 	 (let ((la-item (find-lookahead (item-lookahead (car item-set))
 					(cdr item-set))))
 	   (if la-item
-	       (handle-conflict! "Reduce-reduce" la-item (car item-set))
+	       (handle-conflict! "Reduce-reduce" closure la-item (car item-set))
 	       (loop (cdr item-set))))))
   ;; check for shift-reduce conflict
   (let loop ((items closure))
@@ -128,7 +128,7 @@
 		   (loop (cdr items))
 		   (let ((la-item (find-lookahead (car fs) accept-items)))
 		     (if la-item
-			 (handle-conflict! "Shift-reduce" (car items) la-item)
+			 (handle-conflict! "Shift-reduce" closure (car items) la-item)
 			 (inner-loop (cdr fs))))))))))
 
 (define (cps-parse grammar k first-map state
@@ -217,8 +217,8 @@
 				  (my-take n-active continuations))
 			  (mycons attribute-value
 				  (my-take n-active attribute-values))
-			  (if (member '@error@ (next-terminals closure grammar))
-			      error-here
+			  (if (handles-error? closure grammar)
+			      (generalize1 error-here)
 			      error)
 			  error-status
 			  input)))))
@@ -233,8 +233,8 @@
 			       (my-take n-active continuations))
 		       (mycons attribute-value
 			       (my-take n-active attribute-values))
-		       (if (member '@error@ (next-terminals closure grammar))
-			   error-here
+		       (if (handles-error? closure grammar)
+			   (generalize1 error-here)
 			   error)
 		       error-status
 		       input)))
@@ -259,8 +259,8 @@
 					   (my-take n-active continuations))
 				   (mycons attribute-value
 					   (my-take n-active attribute-values))
-				   (if (member '@error@ nts)
-				       error-here
+				   (if (handles-error? closure grammar)
+				       (generalize1 error-here)
 				       error)
 				   (if (zero? error-status)
 				       error-status
