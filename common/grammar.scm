@@ -14,8 +14,36 @@
    number-of-symbols
    error start
    productions
+   productions-by-lhs
    terminal-attribution)
   ())
+
+(define (make-grammar nonterminals terminals
+		      error start
+		      productions
+		      terminal-attribution)
+  (let* ((number-of-nonterminals (length nonterminals))
+	 (number-of-terminals (length terminals))
+	 (productions-by-lhs (make-vector number-of-nonterminals)))
+    
+    (for-each
+     (lambda (lhs)
+       (vector-set! productions-by-lhs lhs
+		    (really-productions-with-lhs lhs productions)))
+     nonterminals)
+		    
+    (grammar-maker nonterminals terminals
+		   number-of-nonterminals
+		   (+ number-of-nonterminals number-of-terminals)
+		   error start
+		   productions
+		   productions-by-lhs
+		   terminal-attribution)))
+		 
+(define (really-productions-with-lhs lhs productions)
+  (filter (lambda (production)
+	    (equal? lhs (production-lhs production)))
+	  productions))
 
 (define (grammar-start-production grammar)
   (car (grammar-productions grammar)))
@@ -25,6 +53,9 @@
 
 (define (nonterminal? symbol grammar)
   (< symbol (grammar-number-of-nonterminals grammar)))
+
+(define (productions-with-lhs lhs grammar)
+  (vector-ref (grammar-productions-by-lhs grammar) lhs))
 
 ; Productions are specialized and show up in the specialized output.
 ; Hence, they need equality and an external representation.
@@ -56,30 +87,25 @@
        (define-enumeration symbol-enum
 	 ($start nonterminals ... $error terminals ...))
        (define grammar-name
-	 (grammar-maker (list (enum symbol-enum $start)
-			      (enum symbol-enum nonterminals) ...)
-			(list (enum symbol-enum $error)
-			      (enum symbol-enum terminals) ...)
-			(length '($start nonterminals ...))
-			(length '($start nonterminals ... $error terminals ...))
-			(enum symbol-enum $error)
-			(enum symbol-enum $start)
-			(list (make-production
-			       (enum symbol-enum $start)
-			       (list (enum symbol-enum start-symbol))
-			       '(lambda (x) x))
-			      (make-production
-			       (enum symbol-enum lhs)
-			       (list (enum symbol-enum rhs) ...)
-			       `(lambda ,(attribution-arglist '(rhs ...))
-				  expression))
-			      ...)
-			'terminal-attribution))))))
+	 (make-grammar (list (enum symbol-enum $start)
+			     (enum symbol-enum nonterminals) ...)
+		       (list (enum symbol-enum $error)
+			     (enum symbol-enum terminals) ...)
+		       (enum symbol-enum $error)
+		       (enum symbol-enum $start)
+		       (list (make-production
+			      (enum symbol-enum $start)
+			      (list (enum symbol-enum start-symbol))
+			      '(lambda (x) x))
+			     (make-production
+			      (enum symbol-enum lhs)
+			      (list (enum symbol-enum rhs) ...)
+			      `(lambda ,(attribution-arglist '(rhs ...))
+				 expression))
+			     ...)
+		       'terminal-attribution))))))
 
-(define (productions-with-lhs lhs grammar)
-  (filter (lambda (production)
-	    (equal? lhs (production-lhs production)))
-	  (grammar-productions grammar)))
+
 
 ; nullable computation
 
@@ -165,25 +191,18 @@
      (grammar-nonterminals grammar))
     new-first-map))
  
-(define (first-equal? f-1 f-2)
-  (and (= (length f-1) (length f-2))
-       (let loop ((f-1 f-1))
-	 (or (null? f-1)
-	     (and (member (car f-1) f-2)
-		  (loop (cdr f-1)))))))
-	     
 (define (map-equal? fm-1 fm-2)
   (let ((size (vector-length fm-1)))
     (let loop ((i 0))
       (or (= i size)
-	  (and (first-equal? (vector-ref fm-1 i)
-			     (vector-ref fm-2 i))
+	  (and (list-set-equal? (vector-ref fm-1 i)
+				(vector-ref fm-2 i))
 	       (loop (+ 1 i)))))))
 
 (define (compute-first grammar k)
-  ;; fixpoint iteration
   (if (= 1 k)
       (compute-first-1 grammar)
+      ;; fixpoint iteration
       (let loop ((first-map (initial-first-map grammar)))
 	(let ((new-first-map (next-first-map grammar k first-map)))
 	  (if (map-equal? first-map new-first-map)
@@ -300,12 +319,14 @@
     new-follow-map))
 
 (define (compute-follow grammar k first-map)
-  ;; fixpoint iteration
-  (let loop ((follow-map (initial-follow-map grammar)))
-    (let ((new-follow-map (next-follow-map grammar k first-map follow-map)))
-      (if (map-equal? follow-map new-follow-map)
-	  follow-map
-	  (loop new-follow-map)))))
+  (if (= 1 k)
+      (compute-follow-1 grammar first-map)
+      ;; fixpoint iteration
+      (let loop ((follow-map (initial-follow-map grammar)))
+	(let ((new-follow-map (next-follow-map grammar k first-map follow-map)))
+	  (if (map-equal? follow-map new-follow-map)
+	      follow-map
+	      (loop new-follow-map))))))
 
 ; follow_1 computation
 
@@ -446,6 +467,14 @@
 		(restricted-append (- k 1)
 				   (cdr l1)
 				   l2)))))
+
+(define (list-set-equal? f-1 f-2)
+  (and (= (length f-1) (length f-2))
+       (let loop ((f-1 f-1))
+	 (or (null? f-1)
+	     (and (member (car f-1) f-2)
+		  (loop (cdr f-1)))))))
+
 (define (copy-vector vector)
   (let* ((length (vector-length vector))
 	 (copy (make-vector length)))
