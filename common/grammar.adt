@@ -50,6 +50,18 @@
 
       (vector nonterminals terminals productions start))))
 
+; Utilities
+; =========
+
+(defprim (filter pred? list)
+  (let loop ((rest list) (result '()))
+    (if (null? rest)
+	(reverse result)
+	(loop (cdr rest)
+	      (if (pred? (car rest))
+		  (cons (car rest) result)
+		  result)))))
+
 ; Grammars
 ; ========
 
@@ -90,6 +102,7 @@
 
 (defprim (terminal? sym grammar)
   (or (eq? '$ sym)
+      (eq? '@error@ sym)
       (member sym (grammar-terminals grammar))))
 
 (defprim (nonterminal? sym grammar)
@@ -169,7 +182,7 @@
 	(else
 	 (items-merge (cdr is-1) (cons (car is-1) is-2)))))
 
-(defprim (closure state grammar k first-map)
+(defprim (compute-closure state grammar k first-map)
 
   (let ((foobar 'dummy)) ; AKA Similix sucks
 
@@ -261,6 +274,9 @@
   (filter (lambda (item)
 	    (null? (item-rhs-rest item)))
 	  state-closure))
+
+(defprim (items-lookaheads accept-items)
+  (map item-lookahead accept-items))
 
 (defprim (final? state grammar)
   (let loop ((item-set state))

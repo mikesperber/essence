@@ -1,16 +1,6 @@
 ; Utilities
 ; =========
 
-(defprim (filter pred? list)
-  (let loop ((rest list) (result '()))
-    (if (null? rest)
-	(reverse result)
-	(loop (cdr rest)
-	      (if (pred? (car rest))
-		  (cons (car rest) result)
-		  result)))))
-; --- 
-
 (defprim (_sim-display-immediate arg)
   (display arg))
 (defprim (_sim-write-immediate arg)
