@@ -15,12 +15,14 @@
    error start
    productions
    productions-by-lhs
+   symbol->name-procedure
    terminal-attribution)
   ((properties '())))
 
 (define (make-grammar nonterminals terminals
 		      error start
 		      productions
+		      symbol->name-procedure
 		      terminal-attribution)
   (let* ((number-of-nonterminals (length nonterminals))
 	 (number-of-terminals (length terminals))
@@ -38,8 +40,9 @@
 		   error start
 		   productions
 		   productions-by-lhs
+		   symbol->name-procedure
 		   terminal-attribution)))
-		 
+
 (define (really-productions-with-lhs lhs productions)
   (filter (lambda (production)
 	    (equal? lhs (production-lhs production)))
@@ -54,6 +57,9 @@
 			       (cons (cons name value)
 				     (grammar-properties grammar)))
       value))))
+
+(define (grammar-symbol->name symbol grammar)
+  ((grammar-symbol->name-procedure grammar) symbol))
 
 (define (grammar-start-production grammar)
   (car (grammar-productions-with-lhs (grammar-start grammar) grammar)))
@@ -113,6 +119,8 @@
 			      `(lambda ,(attribution-arglist '(rhs ...))
 				 expression))
 			     ...)
+		       (lambda (symbol)
+			 (enumerand->name symbol symbol-enum))
 		       'terminal-attribution))))))
 
 

@@ -13,7 +13,8 @@
 		   handle-error error-status
 		   input)
   (_memo
-   (let* ((closure (compute-closure state))
+   (let* ((closure (compute-closure state grammar k))
+	  (accept-items (accept closure))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
      (define (shift symbol attribute-value error-status input)
@@ -100,7 +101,7 @@
      ;; normal operation
      (define (reduce)
        (cond
-	((find-lookahead-item (accept closure) k input)
+	((find-lookahead-item accept-items k input)
 	 => (lambda (item)
 	      (let* ((rhs-length (length (item-rhs item)))
 		     (attribution (production-attribution
@@ -121,6 +122,9 @@
 		 input))))
 	(else (handle-error error-status input))))
 
+     (check-for-reduce-reduce-conflict closure accept-items grammar k)
+     (check-for-shift-reduce-conflict closure accept-items grammar k)
+
      (cond
       ((stream-empty? input) (reduce))
       ((maybe-the-member (car (stream-car input))
@@ -137,9 +141,9 @@
     (cps-parse grammar
 	       k
 	       (if (equal? method 'lr)
-		   (lambda (state)
+		   (lambda (state grammar k)
 		     (compute-lr-closure state grammar k))
-		   (lambda (state)
+		   (lambda (state grammar k)
 		     (compute-slr-closure state grammar k)))
 	       (list (make-item start-production 0 '()))
 	       (c-nil)

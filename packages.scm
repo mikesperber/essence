@@ -16,6 +16,7 @@
 	  grammar-number-of-nonterminals
 	  grammar-productions-with-lhs
 	  grammar-fetch-property
+	  grammar-symbol->name
 	  production-lhs production-rhs production-attribution
 
 	  grammar-start-production
@@ -35,7 +36,8 @@
 	  goto accept initial? handles-error?
 	  active next-terminals next-nonterminals
 	  make-item
-	  item-lhs item-rhs item-production item-lookahead))
+	  item-lhs item-rhs item-production item-lookahead
+	  check-for-reduce-reduce-conflict check-for-shift-reduce-conflict))
 
 (define-interface parser-interface
   (export parse))
@@ -89,12 +91,12 @@
   (files (common lookahead)
 	 (cps cps-lr-naive)))
 
-(define-structure cps-lr parser-interface
+(define-structure cps-lr-vanilla parser-interface
   (open scheme signals grammar lr-spectime stream
 	cogen-directives)
   (files (common the-trick)
-	 (common lookahead-trie)
-	 (cps cps-lr)))
+	 (common lookahead)
+	 (cps cps-lr-vanilla)))
 
 (define-structure cps-lr-attrib parser-interface
   (open scheme signals grammar lr-spectime stream
@@ -109,3 +111,10 @@
   (files (common the-trick)
 	 (common lookahead)
 	 (cps cps-lr-attrib-error)))
+
+(define-structure cps-lr parser-interface
+  (open scheme signals grammar lr-spectime stream
+	cogen-directives)
+  (files (common the-trick)
+	 (common lookahead)
+	 (cps cps-lr)))

@@ -280,6 +280,69 @@
        (else
 	(loop (cdr item-set)))))))
 
+; Conflict handling
+
+(define (check-for-reduce-reduce-conflict closure accept-items grammar k)
+  (let loop ((items accept-items))
+    (cond
+     ((null? items)
+      'fick-dich-ins-knie)
+     ((let ((lookahead (item-lookahead (car items))))
+	(first (lambda (item)
+		 (equal? lookahead (item-lookahead item)))
+	       (cdr items)))
+      => (lambda (conflict-item)
+	   (display-conflict "Reduce-reduce" (car items) conflict-item grammar)))
+     (else
+      (loop (cdr items))))))
+
+(define (check-for-shift-reduce-conflict closure accept-items grammar k)
+  (let loop ((items closure))
+    (if (null? items)
+	'fick-dich-ins-knie
+	(let* ((item (car items))
+	       (rhs-rest (item-rhs-rest item))
+	       (lookahead (item-lookahead item)))
+	  (if (or (null? rhs-rest)
+		  (nonterminal? (car rhs-rest) grammar))
+	      (loop (cdr items))
+	      (let ((lookaheads (sequence-first (append rhs-rest lookahead)
+						k grammar)))
+		(cond
+		 ((first (lambda (item)
+			   (member (item-lookahead item) lookaheads))
+			 accept-items)
+		  => (lambda (conflict-item)
+		       (display-conflict "Shift-reduce" (car items) conflict-item
+					 grammar)))
+		 (else
+		  (loop (cdr items))))))))))
+
+(define (display-conflict name item-1 item-2 grammar)
+  (display name)
+  (display " conflict between items ")
+  (display-item item-1 grammar)
+  (display " and ")
+  (display-item item-2 grammar)
+  (newline))
+
+(define (display-item item grammar)
+  (display (grammar-symbol->name (item-lhs item) grammar))
+  (display " ->")
+  (let loop ((rhs-symbols (item-rhs item))
+	     (position (item-position item)))
+    (cond
+     ((not (null? rhs-symbols))
+      (write-char #\space)
+      (if (zero? position)
+	  (display ". "))
+      (display (grammar-symbol->name (car rhs-symbols) grammar))
+      (loop (cdr rhs-symbols) (- position 1)))
+     ((zero? position)
+      (display " ."))
+     (else
+      'fick-dich-ins-knie))))
+
 ; List utilities
 
 (define (flatten l)
