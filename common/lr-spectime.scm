@@ -161,7 +161,7 @@
 		      (loop (cdr item-set) predict-set)
 		      (let ((new-items (initial-items lhs)))
 			(loop (cdr item-set)
-			      (uniq (items-merge new-items predict-set)))))))))))
+			      (items-merge new-items predict-set))))))))))
 
   (let loop ((predict-set (strip-lookaheads state)))
     (let ((new-predict-set (next-predict predict-set)))
