@@ -33,16 +33,16 @@
 		    input)))
      
      (define (shift-nonterminal nonterminal attribute-value error-status input)
-       (cond
-	((not (and (initial? state grammar)
-		   (equal? (grammar-start grammar) nonterminal)))
-	 (shift
-	  (the-member nonterminal the-next-nonterminals)
-	  attribute-value
-	  error-status
-	  input))
-	((stream-empty? input) attribute-value)
-	(else (handle-error error-status input))))
+       (if (and (initial? state grammar)
+		(equal? (grammar-start grammar) nonterminal))
+	   (if (stream-empty? input)
+	       attribute-value
+	       (handle-error error-status input))
+	   (shift
+	    (the-member nonterminal the-next-nonterminals)
+	    attribute-value
+	    error-status
+	    input)))
 
      ;; error recovery
      (define (handle-error-here error-status input)

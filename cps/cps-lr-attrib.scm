@@ -29,15 +29,15 @@
 		    input)))
      
      (define (shift-nonterminal nonterminal attribute-value input)
-       (cond
-	((not (and (initial? state grammar)
-		   (equal? (grammar-start grammar) nonterminal)))
-	 (shift
-	  (the-member nonterminal the-next-nonterminals)
-	  attribute-value
-	  input))
-	((stream-empty? input) attribute-value)
-	(else (error "parse error"))))
+       (if (and (initial? state grammar)
+		(equal? (grammar-start grammar) nonterminal))
+	   (if (stream-empty? input)
+	       attribute-value
+	       (error "parse error"))
+	   (shift
+	    (the-member nonterminal the-next-nonterminals)
+	    attribute-value
+	    input)))
 
      (define (reduce item)
        (let* ((rhs-length (length (item-rhs item)))
