@@ -1,30 +1,28 @@
 ;; Essential LR parsing (direct style)
 ;; ===================================
 
-(define (ds-parse grammar k first-map state input)
-  (let ((closure
-	 (compute-lr-closure state grammar k first-map)))
+(define (ds-parse grammar k compute-closure state input)
+  (let ((closure (compute-closure state)))
 
     (cond
      ((and (not (stream-empty? input))
 	   (member (car (stream-car input))
 		   (next-terminals closure grammar)))
-      (ds-parse-bar grammar k first-map closure
+      (ds-parse-bar grammar k compute-closure closure
 		    (car (stream-car input)) (stream-cdr input)))
      ((find-lookahead-item (accept closure) k input)
       => (lambda (item)
 	   (let ((rhs-length (length (item-rhs item)))
 		 (lhs (item-lhs item)))
 	     (if (zero? rhs-length)
-		 (ds-parse-bar grammar k first-map
+		 (ds-parse-bar grammar k compute-closure
 			       lhs input)
 		 (parse-result lhs rhs-length input)))))
      (else (_error "parse error")))))
 
-(define (ds-parse-bar grammar k first-map state symbol input)
-  (let* ((closure
-	  (compute-lr-closure state grammar k first-map))
-	 (result (ds-parse grammar k first-map
+(define (ds-parse-bar grammar k compute-closure state symbol input)
+  (let* ((closure (compute-closure state))
+	 (result (ds-parse grammar k compute-closure
 			   (goto closure symbol) input))
 	 (lhs (result-lhs result))
 	 (dot (result-dot result))
@@ -35,9 +33,11 @@
       (parse-result lhs (- dot 1) input))
      ((and (initial? state grammar)
 	   (equal? (grammar-start grammar) lhs))
-      'accept)
+      (if (stream-empty? input)
+	  'accept
+	  (_error "parse error")))
      (else
-      (ds-parse-bar grammar k first-map
+      (ds-parse-bar grammar k compute-closure
 		    state lhs input)))))
 
 (define (parse-result lhs dot inp)
@@ -50,10 +50,10 @@
   (vector-ref result 2))
 
 (define (parse grammar k input)
-  (let ((start-production (grammar-start-production grammar))
-	(first-map (compute-first grammar k)))
-    
-    (ds-parse grammar k (compute-first grammar k)
-	      (list (make-item start-production 0 '()))
+  (let ((first-map (compute-first grammar k)))
+    (ds-parse grammar k
+	      (lambda (state)
+		(compute-lr-closure state grammar k first-map))
+	      (list (make-item (grammar-start-production grammar) 0 '()))
 	      input)))
 
