@@ -1,9 +1,9 @@
 ;; Essential LR parsing (direct style)
 ;; ===================================
 
-(define (parse grammar k first-map state input)
+(define (parse grammar k compute-closure state input)
   (_memo
-   (let ((closure (compute-closure state grammar k first-map)))
+   (let ((closure (compute-closure state grammar)))
 
      (if (final? state grammar)
 	 (if (equal? '$ (car input))
@@ -12,7 +12,7 @@
 	 (the-trick
 	  (car input) (next-terminals closure grammar)
 	  (lambda (symbol)
-	    (parse-bar grammar k first-map closure
+	    (parse-bar grammar k compute-closure closure
 		       symbol (cdr input)))
 	  (lambda ()
 	    (select-lookahead-item
@@ -21,14 +21,14 @@
 	       (let* ((rhs-length (length (item-rhs item)))
 		      (lhs (item-lhs item)))
 		 (if (zero? rhs-length)
-		     (parse-bar grammar k first-map closure lhs input)
+		     (parse-bar grammar k compute-closure closure lhs input)
 		     (parse-result lhs rhs-length input))))
 	     (lambda ()
 	       (_error "parse error")))))))))
 
-(define (parse-bar grammar k first-map closure symbol input)
+(define (parse-bar grammar k compute-closure closure symbol input)
   (let* ((next-state (goto closure symbol))
-	 (result (parse grammar k first-map next-state input)))
+	 (result (parse grammar k compute-closure next-state input)))
     (if (final? next-state grammar)
 	result
 	(let* ((lhs (result-lhs result))
@@ -41,20 +41,34 @@
 		 (the-trick-cannot-fail
 		  lhs (next-nonterminals closure grammar)
 		  (lambda (symbol)
-		    (parse-bar grammar k first-map closure 
+		    (parse-bar grammar k compute-closure closure 
 			       symbol inp)))))))))
 
 ;; ~~~~~~~~~~~~
 
-(define (do-parse source-grammar k input)
+(define (do-parse source-grammar k method input)
   (let* ((grammar (source-grammar->grammar source-grammar k))
-	 (start-production (car (grammar-productions grammar))))
-    (parse grammar
-	   k
-	   (compute-first grammar k)
-	   (list
-	    (make-item start-production
-		       0
-		       (cdr (production-rhs start-production))))
-	   (append input (make-$ k)))))
+	 (start-production
+	   (car (grammar-productions grammar)))
+	 (first-map (compute-first grammar k)))
+
+    (cond
+     ((equal? method 'lr)
+      (parse grammar
+	     k
+	     (lambda (state grammar)
+	       (compute-lr-closure state grammar k first-map))
+	     (list (make-item start-production
+			      0
+			      (cdr (production-rhs start-production))))
+	     (append input (make-$ k))))
+     ((equal? method 'slr)
+      (let ((follow-map (compute-follow grammar k first-map)))
+	(parse grammar
+	       k
+	       (lambda (state grammar)
+		 (compute-slr-closure state grammar k follow-map))
+	       (add-slr-lookahead (list (make-item start-production 0 #f))
+				  follow-map)
+	       (append input (make-$ k))))))))
 
