@@ -8,10 +8,11 @@
 (define-memo _memo 1)
 (define-primitive error - error)
 
-(define (cps-parse grammar k compute-closure state
-		   continuations attribute-values
-		   handle-error error-status
-		   input)
+(define-without-memoization
+  (cps-parse grammar k compute-closure state
+	     continuations attribute-values
+	     handle-error error-status
+	     input)
   (_memo
    (let* ((closure (compute-closure state grammar k))
 	  (accept-items (accept closure))
@@ -33,16 +34,17 @@
 		    input)))
      
      (define (shift-nonterminal nonterminal attribute-value error-status input)
-       (cond
-	((not (and (initial? state grammar)
-		   (equal? (grammar-start grammar) nonterminal)))
-	 (shift
-	  (the-member nonterminal the-next-nonterminals)
-	  attribute-value
-	  error-status
-	  input))
-	((stream-empty? input) attribute-value)
-	(else (handle-error error-status input))))
+       (_memo
+	(if (and (initial? state grammar)
+		 (equal? (grammar-start grammar) nonterminal))
+	    (if (stream-empty? input)
+		attribute-value
+		(handle-error error-status input))
+	    (shift
+	     (the-member nonterminal the-next-nonterminals)
+	     attribute-value
+	     error-status
+	     input))))
 
      ;; error recovery
      (define (handle-error-here error-status input)
@@ -84,18 +86,19 @@
 					attribute-values)))))))
 	       (recover attribute-value input)))
 
-	   (cond
-	    ((stream-empty? input)
-	     (cond
-	      ((find-eoi-lookahead-item next-accept-items) => reduce-recover)
-	      (else (error "parse error: premature end of input"))))
-	    ((maybe-the-member (car (stream-car input))
-			       (next-terminals next-closure grammar))
-	     => (lambda (symbol)
-		  (recover (cdr (stream-car input)) input)))
-	    ((find-lookahead-item next-accept-items k input)
-	     => reduce-recover)
-	    (else (loop (stream-cdr input)))))))
+	   (_memo
+	    (cond
+	     ((stream-empty? input)
+	      (cond
+	       ((find-eoi-lookahead-item next-accept-items) => reduce-recover)
+	       (else (error "parse error: premature end of input"))))
+	     ((maybe-the-member (car (stream-car input))
+				(next-terminals next-closure grammar))
+	      => (lambda (symbol)
+		   (recover (cdr (stream-car input)) input)))
+	     ((find-lookahead-item next-accept-items k input)
+	      => reduce-recover)
+	     (else (loop (stream-cdr input))))))))
 
      ;; normal operation
      (define (reduce item)
@@ -119,7 +122,6 @@
 
      (check-for-reduce-reduce-conflict closure accept-items grammar k)
      (check-for-shift-reduce-conflict closure accept-items grammar k)
-
 
      (cond
       ((stream-empty? input)
