@@ -17,25 +17,24 @@
 	 (cps-parse grammar k compute-closure
 		    next-state
 		    (c-cons (and (not (null? the-next-nonterminals))
-				 shift-nonterminal)
+				 (_memo shift-nonterminal))
 			    (c-take (- (active next-state) 1)
 				    continuations))
 		    input)))
      
      (define (shift-nonterminal nonterminal input)
-       (_memo
-	(if (and (initial? state grammar)
-		 (eqv? (grammar-start grammar) nonterminal))
-	    (if (stream-empty? input)
-		'accept
-		'error)
-	    (shift
-	     (the-member nonterminal the-next-nonterminals)
-	     input))))
+       (if (and (initial? state grammar)
+		(eqv? (grammar-start grammar) nonterminal))
+	   (if (stream-empty? input)
+	       'accept
+	       'error)
+	   (shift
+	    (the-member nonterminal the-next-nonterminals)
+	    input)))
 
      (define (reduce item)
        ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
-				 shift-nonterminal)
+				 (_memo shift-nonterminal))
 			    continuations)
 		    (length (item-rhs item)))
 	(item-lhs item) input))

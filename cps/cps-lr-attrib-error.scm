@@ -23,7 +23,7 @@
 	 (cps-parse grammar k compute-closure
 		    next-state
 		    (c-cons (and (not (null? the-next-nonterminals))
-				 shift-nonterminal)
+				 (_memo shift-nonterminal))
 			    (c-take keep continuations))
 		    (c-cons attribute-value (c-take keep attribute-values))
 		    handle-error
@@ -31,21 +31,20 @@
 		    input)))
      
      (define (shift-nonterminal nonterminal attribute-value error-status input)
-       (_memo
-	(let ((handle-error (if (handles-error? closure grammar)
-				handle-error-here
-				handle-error)))
-	  (if (and (initial? state grammar)
-		   (equal? (grammar-start grammar) nonterminal))
-	      (if (stream-empty? input)
-		  attribute-value
-		  (handle-error error-status input))
-	      (shift
-	       (the-member nonterminal the-next-nonterminals)
-	       attribute-value
-	       handle-error
-	       error-status
-	       input)))))
+       (let ((handle-error (if (handles-error? closure grammar)
+			       handle-error-here
+			       handle-error)))
+	 (if (and (initial? state grammar)
+		  (equal? (grammar-start grammar) nonterminal))
+	     (if (stream-empty? input)
+		 attribute-value
+		 (handle-error error-status input))
+	     (shift
+	      (the-member nonterminal the-next-nonterminals)
+	      attribute-value
+	      handle-error
+	      error-status
+	      input))))
 
      ;; error recovery
      (define (handle-error-here error-status input)
@@ -59,7 +58,7 @@
 	   (cps-parse grammar k compute-closure
 		      next-state
 		      (c-cons (and (not (null? the-next-nonterminals))
-				   shift-nonterminal)
+				   (_memo shift-nonterminal))
 			      (c-take keep continuations))
 		      (c-cons attribute-value
 			      (c-take keep attribute-values))
@@ -109,7 +108,7 @@
 		  (c-take rhs-length attribute-values))))))
 
 	 ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
-				   shift-nonterminal)
+				   (_memo shift-nonterminal))
 			      continuations)
 		      rhs-length)
 	  (item-lhs item) attribute-value

@@ -22,22 +22,21 @@
 	 (cps-parse grammar k compute-closure
 		    next-state
 		    (c-cons (and (not (null? the-next-nonterminals))
-				 shift-nonterminal)
+				 (_memo shift-nonterminal))
 			    (c-take keep continuations))
 		    (c-cons attribute-value (c-take keep attribute-values))
 		    input)))
      
      (define (shift-nonterminal nonterminal attribute-value input)
-       (_memo
-	(if (and (initial? state grammar)
-		 (equal? (grammar-start grammar) nonterminal))
-	    (if (stream-empty? input)
-		attribute-value
-		(error "parse error"))
-	    (shift
-	     (the-member nonterminal the-next-nonterminals)
-	     attribute-value
-	     input))))
+       (if (and (initial? state grammar)
+		(equal? (grammar-start grammar) nonterminal))
+	   (if (stream-empty? input)
+	       attribute-value
+	       (error "parse error"))
+	   (shift
+	    (the-member nonterminal the-next-nonterminals)
+	    attribute-value
+	    input)))
 
      (define (reduce item)
        (let* ((rhs-length (length (item-rhs item)))
@@ -51,7 +50,7 @@
 		  (c-take rhs-length attribute-values))))))
 
 	 ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
-				   shift-nonterminal)
+				   (_memo shift-nonterminal))
 			      continuations)
 		      rhs-length)
 	  (item-lhs item) attribute-value

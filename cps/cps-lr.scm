@@ -31,19 +31,18 @@
 		    handle-error)))
      
      (define (shift-nonterminal nonterminal)
-       (_memo
-	(let ((handle-error (if (handles-error? closure grammar)
-				handle-error-here
-				handle-error)))
-	  (if (and (initial? state grammar)
-		   (equal? (grammar-start grammar) nonterminal))
-	      (if (stream-empty? *input*)
-		  *attribute-value*
-		  (handle-error))
-	      (shift
-	       (the-member nonterminal the-next-nonterminals)
-	       shift-nonterminal
-	       handle-error)))))
+       (let ((handle-error (if (handles-error? closure grammar)
+			       handle-error-here
+			       handle-error)))
+	 (if (and (initial? state grammar)
+		  (equal? (grammar-start grammar) nonterminal))
+	     (if (stream-empty? *input*)
+		 *attribute-value*
+		 (handle-error))
+	     (shift
+	      (the-member nonterminal the-next-nonterminals)
+	      (_memo shift-nonterminal)
+	      handle-error))))
 
      ;; error recovery
      (define (handle-error-here)
@@ -119,7 +118,7 @@
 			     handle-error))
 	   (maybe-shift-nonterminal
 	    (and (not (null? the-next-nonterminals))
-		 shift-nonterminal)))
+		 (_memo shift-nonterminal))))
        (cond
 	((stream-empty? *input*)
 	 (cond
