@@ -7,7 +7,8 @@
 (define *lhs* #f)
 (define *input* #f)
 
-(define (ds-parse grammar k compute-closure state input)
+(define-without-memoization
+  (ds-parse grammar k compute-closure state input)
   (_memo
    (let ((closure (compute-closure state grammar k)))
 
@@ -35,25 +36,27 @@
 			  symbol (stream-cdr input))))
       (else (reduce))))))
 
-(define (ds-parse-bar grammar k compute-closure closure symbol input)
-  (let ((the-next-nonterminals (next-nonterminals closure grammar))
-	(dot (ds-parse grammar k compute-closure
-		       (goto closure symbol) input)))
-    (cond
-     ((null? the-next-nonterminals)
-      (- dot 1))
-     ((> dot 1)
-      (- dot 1))
-     ((and (initial? closure grammar)
-	   (equal? (grammar-start grammar) *lhs*))
-      (if (stream-empty? *input*)
-	  'accept
-	  (error "parse error")))
-     (else
-      (ds-parse-bar grammar k compute-closure
-		    closure
-		    (the-member *lhs* the-next-nonterminals)
-		    *input*)))))
+(define-without-memoization
+  (ds-parse-bar grammar k compute-closure closure symbol input)
+  (_memo
+   (let ((the-next-nonterminals (next-nonterminals closure grammar))
+	 (dot (ds-parse grammar k compute-closure
+			(goto closure symbol) input)))
+     (cond
+      ((null? the-next-nonterminals)
+       (- dot 1))
+      ((> dot 1)
+       (- dot 1))
+      ((and (initial? closure grammar)
+	    (equal? (grammar-start grammar) *lhs*))
+       (if (stream-empty? *input*)
+	   'accept
+	   (error "parse error")))
+      (else
+       (ds-parse-bar grammar k compute-closure
+		     closure
+		     (the-member *lhs* the-next-nonterminals)
+		     *input*))))))
 
 (define (parse grammar k method input)
   (let ((start-production (grammar-start-production grammar)))
