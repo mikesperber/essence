@@ -1,14 +1,14 @@
-(define-grammar g10
+(define-grammar g10 g10-symbol
   (E T P)
   (+ - * / l r n)
   E
-  (((E T))
+  (((E T) $1)
    ((E T + E) (+ $1 $3))
    ((E T - E) (- $1 $3))
-   ((T P))
+   ((T P) $1)
    ((T P * T) (* $1 $3))
    ((T P / T) (/ $1 $3))
-   ((P n))
+   ((P n) $1)
    ((P l E r) $2))
   (if (eq? terminal 'n)
       42

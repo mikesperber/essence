@@ -32,98 +32,47 @@
 (define (production-rhs p) (vector-ref p 1))
 (define (production-attribution p) (vector-ref p 2))
 
+(define (attribution-arglist args)
+  (define (conc . things)
+    (string->symbol (apply string-append
+			   (map (lambda (thing)
+				  (if (symbol? thing)
+				      (symbol->string thing)
+				      thing))
+				things))))
+  
+  (let loop ((i (length args)) (l '()))
+    (if (zero? i)
+	l
+	(loop (- i 1) (cons (conc "$" (number->string i)) l)))))
+
 (define-syntax define-grammar
-  (lambda (exp rename compare)
+  (syntax-rules ()
+    ((define-grammar grammar-name symbol-enum nts ts s rules)
+     (define-grammar grammar-name symbol-enum nts ts s rules #f))
+    ((define-grammar grammar-name symbol-enum
+       (nonterminals ...)
+       (terminals ...)
+       start-symbol
+       (((lhs rhs ...) expression) ...)
+       terminal-attribution)
+     (begin
+       (define-enumeration symbol-enum
+	 (eoi error terminals ... start-symbol nonterminals ...))
+       (define grammar-name
+	 (make-grammar (list (enum symbol-enum nonterminals) ...)
+		       (list (enum symbol-enum eoi)
+			     (enum symbol-enum error)
+			     (enum symbol-enum terminals) ...)
+		       (enum symbol-enum eoi)
+		       (enum symbol-enum error)
+		       (enum symbol-enum start-symbol)
+		       (list (make-production
+			      (enum symbol-enum lhs)
+			      (list (enum symbol-enum rhs) ...)
+			      `(lambda ,(attribution-arglist '(rhs ...))
+				 expression))
+			     ...)
+		       'terminal-attribution))))))
 
-    (define (conc . things)
-      (string->symbol (apply string-append
-			     (map (lambda (thing)
-				    (if (symbol? thing)
-					(symbol->string thing)
-					thing))
-				  things))))
-
-    (define rule-production car)
-    (define (rule-contains-attribution? rule)
-      (not (null? (cdr rule))))
-    (define rule-attribution cadr)
-
-    (define (make-attribution-arglist i)
-      (let loop ((i i) (l '()))
-	(if (zero? i)
-	    l
-	    (loop (- i 1)
-		  (cons (conc "$" (number->string i)) l)))))
-
-    (define (make-trivial-attribution rhs-length)
-      `(lambda ,(make-attribution-arglist rhs-length)
-	 '$1))
-
-    (define (rule-make-attribution rule)
-      (let ((rhs-length (length (cdr (rule-production rule)))))
-	`(lambda ,(make-attribution-arglist rhs-length)
-	   ,(if (rule-contains-attribution? rule)
-		(rule-attribution rule)
-		'$1))))
-
-    (let ((name (cadr exp))
-	  (nonterminals (list-ref exp 2))
-	  (terminals (list-ref exp 3))
-	  (start (list-ref exp 4))
-	  (rules (list-ref exp 5))
-	  (terminal-attribution (if (null? (list-tail exp 6))
-				    #f
-				    (list-ref exp 6)))
-
-	  (%begin (rename 'begin))
-	  (%define (rename 'define))
-	  (%let (rename 'let))
-	  (%lambda (rename 'lambda))
-
-	  (%list (rename 'list))
-	  (%map (rename 'map))
-
-	  (%define-enumeration (rename 'define-enumeration))
-	  (%name->enumerand (rename 'name->enumerand))
-	  (%enum (rename 'enum))
-
-	  (%make-grammar (rename 'make-grammar))
-	  (%make-production (rename 'make-production)))
-
-      (let ((s-name (conc name '- "symbol"))
-	    (new-start (conc start "^"))
-	    (extra-terminals '(eoi error)))
-
-	`(,%begin
-	  (,%define-enumeration ,s-name ,(append extra-terminals 
-						 terminals
-						 (list new-start)
-						 nonterminals))
-	  (,%define ,name
-	    (,%make-grammar (,%list
-			     ,@(map (lambda (n) `(,%enum ,s-name ,n))
-				    (cons new-start nonterminals)))
-			    (,%list
-			     ,@(map (lambda (t) `(,%enum ,s-name ,t))
-				    (append extra-terminals terminals)))
-			    (,%enum ,s-name eoi)
-			    (,%enum ,s-name error)
-			    (,%enum ,s-name ,new-start)
-			    (,%list
-			     (,%make-production
-			      (,%enum ,s-name ,new-start)
-			      (,%list (,%enum ,s-name ,start))
-			      ,(make-trivial-attribution 1))
-			     ,@(map
-				(lambda (rule)
-				  `(,%make-production
-				    (,%enum ,s-name ,(car (rule-production rule)))
-				    (,%list
-				     ,@(map (lambda (symbol)
-					    `(,%enum ,s-name ,symbol))
-					   (cdr (rule-production rule))))
-				    ',(rule-make-attribution rule)))
-				rules))
-
-			    ',terminal-attribution)))))))
 
