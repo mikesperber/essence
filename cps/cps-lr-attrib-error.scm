@@ -18,7 +18,7 @@
 	  (accept-items (accept closure))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
-     (define (shift symbol attribute-value error-status input)
+     (define (shift symbol attribute-value handle-error error-status input)
        (let* ((next-state (goto closure symbol))
 	      (keep (- (active next-state) 1)))
 	 (cps-parse grammar k compute-closure
@@ -27,24 +27,26 @@
 				 shift-nonterminal)
 			    (c-take keep continuations))
 		    (c-cons attribute-value (c-take keep attribute-values))
-		    (if (handles-error? closure grammar)
-			handle-error-here
-			handle-error)
+		    handle-error
 		    error-status
 		    input)))
      
      (define (shift-nonterminal nonterminal attribute-value error-status input)
        (_memo
-	(if (and (initial? state grammar)
-		 (equal? (grammar-start grammar) nonterminal))
-	    (if (stream-empty? input)
-		attribute-value
-		(handle-error error-status input))
-	    (shift
-	     (the-member nonterminal the-next-nonterminals)
-	     attribute-value
-	     error-status
-	     input))))
+	(let ((handle-error (if (handles-error? closure grammar)
+				handle-error-here
+				handle-error)))
+	  (if (and (initial? state grammar)
+		   (equal? (grammar-start grammar) nonterminal))
+	      (if (stream-empty? input)
+		  attribute-value
+		  (handle-error error-status input))
+	      (shift
+	       (the-member nonterminal the-next-nonterminals)
+	       attribute-value
+	       handle-error
+	       error-status
+	       input)))))
 
      ;; error recovery
      (define (handle-error-here error-status input)
@@ -115,19 +117,23 @@
 	  error-status
 	  input)))
 
-     (cond
-      ((stream-empty? input)
+     (let ((handle-error (if (handles-error? closure grammar)
+			     handle-error-here
+			     handle-error)))
        (cond
-	((find-eoi-lookahead-item accept-items) => reduce)
-	(else (handle-error error-status input))))
-      ((maybe-the-member (car (stream-car input))
-			 (next-terminals closure grammar))
-       => (lambda (symbol)
-	    (shift symbol (cdr (stream-car input))
-		   (move-error-status error-status)
-		   (stream-cdr input))))
-      ((find-lookahead-item accept-items k input) => reduce)
-      (else (handle-error error-status input))))))
+	((stream-empty? input)
+	 (cond
+	  ((find-eoi-lookahead-item accept-items) => reduce)
+	  (else (handle-error error-status input))))
+	((maybe-the-member (car (stream-car input))
+			   (next-terminals closure grammar))
+	 => (lambda (symbol)
+	      (shift symbol (cdr (stream-car input))
+		     handle-error
+		     (move-error-status error-status)
+		     (stream-cdr input))))
+	((find-lookahead-item accept-items k input) => reduce)
+	(else (handle-error error-status input)))))))
 
 (define (parse grammar k method input)
   (let ((start-production (grammar-start-production grammar)))
