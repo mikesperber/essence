@@ -1,0 +1,227 @@
+; Essential LR parsing
+; ====================
+
+(loadt "cps-lr.adt")
+
+(define (generalize1 z)
+  (if #t z (generalize z)))
+
+(define (eta-expand-2-d c)
+  (lambda (x y)
+    (c x y)))
+
+(define (eta-expand-2-s c)
+  (lambda (x y)
+    (c x y)))
+
+(define (collapse-2 c)
+  (eta-expand-2-s (generalize1 (eta-expand-2-d c))))
+
+; ---
+ 
+(define (filter-2 pred? list)
+  (let loop ((rest list) (result '()))
+    (if (null? rest)
+	(reverse result)
+	(loop (cdr rest)
+	      (if (pred? (car rest))
+		  (cons (car rest) result)
+		  result)))))
+
+(define (my-take n inl)
+  (cond ((zero? n) (mynil))
+	((= n 1) (mycons (mycar inl) (mynil)))
+	(else
+	 (mycons (mycar inl) (my-take (- n 1) (mycdr inl))))))
+
+(define (my-drop n lst)
+  (if (zero? n)
+      lst
+      (my-drop (- n 1) (mycdr lst))))
+
+(define (my-list-ref l n)
+  (mycar (my-drop n l)))
+
+; ---
+
+(define (goto-the-trick state-closure symbol grammar c)
+  (let ((nonterm (nextnonterm state-closure grammar)))
+    (if (null? nonterm)
+	#f
+	(let loop ((s nonterm))
+	  (if (null? (cdr s))
+	      (c (goto state-closure (car s)))
+	      (if (equal? (car s) symbol)
+		  (c (goto state-closure (car s)))
+		  (loop (cdr s))))))))
+
+(define (cps-parse grammar k first-map state input continuations)
+
+  (if (and (final? state grammar)
+	   (equal? '$ (car input)))
+      'accept
+      (let* ((closure (closure state grammar k first-map))
+	     (accept-items (accept closure)))
+
+	(define (c0 symbol input)
+	  (goto-the-trick
+	   closure symbol grammar
+	   (lambda (next-state)
+	     (cps-parse grammar k first-map
+			next-state
+			input
+			(mycons (collapse-2 c0)
+				(my-take (- (active next-state) 1) continuations))))))
+
+	(define (shift-term)
+	  (let ((t (car input)))
+	    (let loop ((ts (nextterm closure grammar)))
+	      (if (null? ts)
+		  (_sim-error 'cps-parse "Syntax Terror, call the bomb squad!")
+		  (if (equal? t (car ts))
+		      (let* ((next-state (goto closure (car ts))))
+			(cps-parse grammar k first-map
+				   next-state
+				   (cdr input)
+				   (mycons (collapse-2 c0)
+					   (my-take (- (active next-state) 1) continuations))))
+		      (loop (cdr ts)))))))
+
+	(define (shift-nonterm s)
+	  (let loop ((ss (nextnonterm closure grammar)))
+	    (if (equal? s (car ss))
+		(let ((next-state (goto closure (car ss))))
+		  (cps-parse grammar k first-map
+			     next-state
+			     input
+			     (mycons (collapse-2 c0)
+				     (my-take (- (active next-state) 1) continuations))))
+		(loop (cdr ss)))))
+
+	(define (select-lookahead-item-the-trick item-set input c)
+	  (let loop ((item-set item-set)
+		     (pos 0)
+		     (input input))
+	    (if (= pos k)
+		(c (if (null? item-set) #f (car item-set)))
+		(if (null? item-set)
+		    (c #f)
+		    (let ((t (car input)))
+		      (let loop-2 ((items item-set)
+				   (used-lookaheads '()))
+			
+			(if (null? items)
+			    (c #f)
+			    (let* ((item (car items))
+				   (kth-lookahead (list-ref (item-lookahead item) pos)))
+			      (if (member kth-lookahead used-lookaheads)
+				  (loop-2 (cdr items) used-lookaheads)
+				  (if (equal? t kth-lookahead)
+				      (loop (filter-2 (lambda (item)
+							(equal?
+							 (list-ref (item-lookahead item) pos)
+							 kth-lookahead))
+						      item-set)
+					    (+ pos 1)
+					    (if (= (+ 1 pos) k)
+						'() ; so as to not touch (cdr input)
+						(cdr input)))
+				      (loop-2 (cdr items) (cons kth-lookahead used-lookaheads))))))))))))
+	    
+	(define (reduce)
+	  (let ((item-set accept-items))
+	    (if (null? item-set)
+		(shift-term)
+		(select-lookahead-item-the-trick item-set input
+		 (lambda (item)
+		   (if (not item)
+		       (shift-term)
+		       (let ((rhs-length (length (item-rhs item))))
+;			 (display "Reducing by ") (write item) (newline)
+			 ; reduce, then shift on lhs
+			 (if (zero? rhs-length)
+			     (shift-nonterm (item-lhs item))
+			     ((my-list-ref continuations (- rhs-length 1))
+			      (item-lhs item)
+			      input)))))))))
+
+	(define (handle-conflict! name item-1 item-2)
+	  (_sim-display-immediate name)
+	  (_sim-display-immediate " conflict in state ")
+	  (_sim-write-immediate closure)
+	  (_sim-newline-immediate)
+	  (_sim-display-immediate "(items ")
+	  (_sim-write-immediate item-1)
+	  (_sim-display-immediate " and ")
+	  (_sim-write-immediate item-2))
+
+	(define (find-lookahead la items)
+	  (let loop ((items items))
+	    (if (null? items)
+		#f
+		(if (equal? (item-lookahead (car items)) la)
+		    (car items)
+		    (loop (cdr items))))))
+
+	(define (check-for-reduce-reduce-conflict!)
+	  (let loop ((item-set accept-items))
+	    (if (null? item-set)
+		#f
+		(let ((la-item (find-lookahead (item-lookahead (car item-set))
+					       (cdr item-set))))
+		  (if la-item
+		      (handle-conflict! "Reduce-reduce" la-item (car item-set))
+		      (loop (cdr item-set)))))))
+
+	(define (check-for-shift-reduce-conflict!)
+	  (let loop ((items closure))
+	    (if (null? items)
+		#f
+		(if (null? (item-rhs-rest (car items)))
+		    (loop (cdr items))
+		    (let inner-loop ((fs (sf-first
+					  (append-k k
+						    (item-rhs-rest (car items))
+						    (item-lookahead (car items)))
+					  k grammar first-map)))
+		      (if (null? fs)
+			  (loop (cdr items))
+			  (let ((la-item (find-lookahead (car fs) accept-items)))
+			    (if la-item
+				(handle-conflict! "Shift-reduce" (car items) la-item)
+				(inner-loop (cdr fs))))))))))
+
+;	(display ">>> cps-parse: ")
+;	(write state)
+;	(newline)
+;	(display "    closure: ")
+;	(write closure)
+;	(newline)
+;	(display "    input: ")
+;	(write input)
+;	(newline)
+;	(newline)
+
+	(check-for-reduce-reduce-conflict!)
+	(check-for-shift-reduce-conflict!)
+	(reduce))))
+
+(define (parse grammar k input)
+  (define (make-$ n)
+    (if (zero? n)
+	'()
+	(cons '$ (make-$ (- n 1)))))
+  
+  (let (($s (make-$ k)))
+    (cps-parse grammar
+	       k
+	       (compute-first grammar k)
+	       (list
+		(make-item (cons 'yummy-yummy
+				 (cons (grammar-start grammar)
+				       $s))
+			   0
+			   $s))
+	       (append input (cons '$ $s))
+	       (mynil))))
+
