@@ -1,4 +1,4 @@
-(define (the-trick element set cont fail)
+(define-without-memoization (the-trick element set cont fail)
   (let loop ((set set))
     (if (null? set)
 	(fail)
@@ -6,7 +6,7 @@
 	    (cont (car set))
 	    (loop (cdr set))))))
 
-(define (the-trick-cannot-fail element set cont)
+(define-without-memoization (the-trick-cannot-fail element set cont)
   (let loop ((set set))
     (if (null? (cdr set))
 	(cont (car set))
