@@ -2,7 +2,7 @@
 ;; ===================================
 
 (define-memo _memo 1)
-(define-primitive error - error)
+(define-primitive error - dynamic)
 
 (define *lhs* #f)
 (define *input* #f)

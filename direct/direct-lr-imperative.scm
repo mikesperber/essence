@@ -1,7 +1,7 @@
 ;; Essential LR parsing (direct style)
 ;; ===================================
 
-(define-primitive error - error)
+(define-primitive error - dynamic)
 
 (define *lhs* #f)
 (define *input* #f)

@@ -5,7 +5,7 @@
   (c-cons c-car c-cdr)
   (c-nil))
 
-(define-primitive error - error)
+(define-primitive error - dynamic)
 
 (define *input* #f)
 (define *error-status* #f)

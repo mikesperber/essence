@@ -5,7 +5,7 @@
   (c-cons c-car c-cdr)
   (c-nil))
 
-(define-primitive error - error)
+(define-primitive error - dynamic)
 
 (define-without-memoization
   (cps-parse grammar k compute-closure state

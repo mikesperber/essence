@@ -1,7 +1,7 @@
 ;; Essential LR parsing (direct style)
 ;; ===================================
 
-(define-primitive error - error)
+(define-primitive error - dynamic)
 
 (define-without-memoization
   (ds-parse grammar k compute-closure state input)

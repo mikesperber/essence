@@ -1,1 +1,1 @@
-(define-primitive error - error)
+(define-primitive error - dynamic)
