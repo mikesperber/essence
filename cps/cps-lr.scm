@@ -48,7 +48,7 @@
      (define (handle-error-here error-status input)
        (let* ((next-state (goto closure (grammar-error grammar)))
 	      (keep (- (active next-state) 1))
-	      (next-closure (compute-closure next-state))
+	      (next-closure (compute-closure next-state grammar k))
 	      (input 
 	       (cond
 		((zero? error-status) input)
