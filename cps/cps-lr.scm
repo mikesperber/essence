@@ -8,7 +8,7 @@
       (let ((closure (compute-closure state grammar k first-map)))
 
 	(define (shift-nonterminal nonterminal input)
-	  (the-trick
+	  (the-trick-cannot-fail
 	   nonterminal (next-nonterminals closure grammar)
 	   (lambda (symbol)
 	     (let ((next-state (goto closure symbol)))
@@ -17,9 +17,7 @@
 		      (cons shift-nonterminal
 			    (take (- (active next-state) 1)
 				  continuations))
-		      input)))
-	   (lambda ()
-	     'you-cannot-see-me)))
+		      input)))))
 
 	(define (shift-terminal terminal input fail)
 	  (the-trick
@@ -67,6 +65,14 @@
   (let loop ((set set))
     (if (null? set)
 	(fail)
+	(if (equal? element (car set))
+	    (cont (car set))
+	    (loop (cdr set))))))
+
+(define (the-trick-cannot-fail element set cont)
+  (let loop ((set set))
+    (if (null? (cdr set))
+	(cont (car set))
 	(if (equal? element (car set))
 	    (cont (car set))
 	    (loop (cdr set))))))
