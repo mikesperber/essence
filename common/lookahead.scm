@@ -3,16 +3,13 @@
       '()
       (cons (car l) (in-take (- n 1) (cdr l)))))
 
-(define (first p l)
-  (cond ((null? l) #f)
-	((p (car l) (car l)))
-	(else (first p (cdr l)))))
-
-(define (select-lookahead-item item-set k input cont fail)
-  (let* ((input-front (in-take k input))
-	 (item (first (lambda (item)
-			(equal? input-front (item-lookahead item)))
-		      item-set)))
-    (if item
-	(cont item)
-	(fail))))
+(define-without-memoization
+  (select-lookahead-item item-set k input cont fail)
+  (let ((input-front (in-take k input)))
+    (let loop ((item-set item-set))
+      (if (null? item-set)
+	  (fail)
+	  (let ((item (car item-set)))
+	    (if (equal? input-front (item-lookahead item))
+		(cont item)
+		(loop (cdr item-set))))))))
