@@ -1,7 +1,17 @@
 ; Start-separated grammars
 
+; Guarantees:
+
+; - the grammar symbols are numbers.
+; - nonterminals and terminals are consecutive, respectively
+; - the nonterminals come before the terminals
+; - the start production is first
+
 (define-record-type grammar
-  (nonterminals terminals
+  (nonterminals
+   terminals
+   number-of-nonterminals
+   number-of-symbols
    error start
    productions
    terminal-attribution)
@@ -10,11 +20,11 @@
 (define (grammar-start-production grammar)
   (car (grammar-productions grammar)))
 
-(define (terminal? sym grammar)
-  (or (member sym (grammar-terminals grammar))))
+(define (terminal? symbol grammar)
+  (>= symbol (grammar-number-of-nonterminals grammar)))
 
-(define (nonterminal? sym grammar)
-  (not (terminal? sym grammar)))
+(define (nonterminal? symbol grammar)
+  (< symbol (grammar-number-of-nonterminals grammar)))
 
 ; Productions are specialized and show up in the specialized output.
 ; Hence, they need equality and an external representation.
@@ -44,11 +54,14 @@
        terminal-attribution)
      (begin
        (define-enumeration symbol-enum
-	 ($error terminals ... $start nonterminals ...))
+	 ($start nonterminals ... $error terminals ...))
        (define grammar-name
-	 (grammar-maker (list (enum symbol-enum nonterminals) ...)
+	 (grammar-maker (list (enum symbol-enum $start)
+			      (enum symbol-enum nonterminals) ...)
 			(list (enum symbol-enum $error)
 			      (enum symbol-enum terminals) ...)
+			(length '($start nonterminals ...))
+			(length '($start nonterminals ... $error terminals ...))
 			(enum symbol-enum $error)
 			(enum symbol-enum $start)
 			(list (make-production
@@ -67,6 +80,38 @@
   (filter (lambda (production)
 	    (equal? lhs (production-lhs production)))
 	  (grammar-productions grammar)))
+
+; nullable computation
+
+(define (compute-nullable? grammar)
+  
+  (let ((visited-vector
+	 (make-vector (grammar-number-of-nonterminals grammar) #f))
+	(nullable-vector
+	 (make-vector (grammar-number-of-nonterminals grammar) #f)))
+    
+    (define (nullable? nonterminal)
+      (if (vector-ref visited-vector nonterminal)
+	  (vector-ref nullable-vector nonterminal)
+	  (begin
+	    (vector-set! visited-vector nonterminal #t)
+	    (let loop ((productions (productions-with-lhs nonterminal grammar)))
+	      (if (null? productions)
+		  #f
+		  (let ((production (car productions)))
+		    (if (every? (lambda (symbol)
+				  (and (nonterminal? symbol grammar)
+				       (nullable? symbol)))
+				(production-rhs production))
+			(begin
+			  (vector-set! nullable-vector nonterminal #t)
+			  #t)
+			(loop (cdr productions)))))))))
+
+    (for-each nullable? (grammar-nonterminals grammar))
+
+    (lambda (nonterminal)
+      (vector-ref nullable-vector nonterminal))))
 
 ; First set computation
 
@@ -88,7 +133,7 @@
 		  (map
 		   (lambda (f-car)
 		     (restricted-append k f-car f-cdr))
-		   (cdr (assoc s first-map))))
+		   (vector-ref first-map s)))
 		cdr-first)))))))
 
 (define (lhs-next-first lhs k grammar old-first)
@@ -102,18 +147,17 @@
 
 (define (initial-first-map grammar)
   ;; each nonterminal is associated with the empty set
-  (map (lambda (nt)
-	 (cons nt '()))
-       (grammar-nonterminals grammar)))
+  (make-vector (grammar-number-of-nonterminals grammar) '()))
 
 (define (next-first-map grammar k last-first-map)
   ;; "Gesamtschritt" step in solving the flow equation system for first_k
-  (map
-   (lambda (first-map-entry)
-     (let ((nonterm (car first-map-entry)))
-       (cons nonterm
-	     (lhs-next-first nonterm k grammar last-first-map))))
-   last-first-map))
+  (let ((new-first-map (make-vector (grammar-number-of-nonterminals grammar))))
+    (for-each
+     (lambda (nonterminal)
+       (vector-set! new-first-map nonterminal
+		    (lhs-next-first nonterminal k grammar last-first-map)))
+     (grammar-nonterminals grammar))
+    new-first-map))
  
 (define (first-equal? f-1 f-2)
   (and (= (length f-1) (length f-2))
@@ -123,14 +167,12 @@
 		  (loop (cdr f-1)))))))
 	     
 (define (first-map-equal? fm-1 fm-2)
-  (let loop ((fm-1 fm-1))
-    (or (null? fm-1)
-	(let* ((nonterm-1 (caar fm-1))
-	       (first-1 (cdar fm-1))
-	       (first-2 (cdr (assoc nonterm-1 fm-2))))
-	  (and (first-equal? first-1 first-2)
-	       (loop (cdr fm-1)))))))
-
+  (let ((size (vector-length fm-1)))
+    (let loop ((i 0))
+      (or (= i size)
+	  (and (first-equal? (vector-ref fm-1 i)
+			     (vector-ref fm-2 i))
+	       (loop (+ 1 i)))))))
 
 (define (compute-first grammar k)
   ;; fixpoint iteration
