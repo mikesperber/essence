@@ -54,20 +54,27 @@
   (open scheme big-scheme grammar)
   (files (common lr-spectime)))
 
+(define-structure ds-lr-naive parser-interface
+  (open scheme signals grammar lr-spectime stream
+	cogen-directives)
+  (begin
+    (define _error error))
+  (files (common lookahead)
+	 (direct direct-lr-naive)))
+
 (define-structure ds-lr parser-interface
-  (open scheme signals cogen-directives lr-spectime)
+  (open scheme signals grammar lr-spectime stream
+	cogen-directives)
   (begin
     (define _error error))
   (files (common the-trick)
 	 (common lookahead)
-	 (direct parse-result)
 	 (direct direct-lr)))
 
 (define-structure cps-lr-naive parser-interface
   (open scheme signals grammar lr-spectime stream
 	cogen-directives)
-  (files (common the-trick)
-	 (common lookahead)
+  (files (common lookahead)
 	 (cps cps-lr-naive)))
 
 (define-structure cps-lr parser-interface
