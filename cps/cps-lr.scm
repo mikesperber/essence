@@ -31,18 +31,19 @@
 		    handle-error)))
      
      (define (shift-nonterminal nonterminal)
-       (let ((handle-error (if (handles-error? closure grammar)
-			       handle-error-here
-			       handle-error)))
-	 (if (and (initial? state grammar)
-		  (equal? (grammar-start grammar) nonterminal))
-	     (if (stream-empty? *input*)
-		 *attribute-value*
-		 (handle-error))
-	     (shift
-	      (the-member nonterminal the-next-nonterminals)
-	      (_memo shift-nonterminal)
-	      handle-error))))
+       (_memo
+	(let ((handle-error (if (handles-error? closure grammar)
+				handle-error-here
+				handle-error)))
+	  (if (and (initial? state grammar)
+		   (equal? (grammar-start grammar) nonterminal))
+	      (if (stream-empty? *input*)
+		  *attribute-value*
+		  (handle-error))
+	      (shift
+	       (the-member nonterminal the-next-nonterminals)
+	       shift-nonterminal
+	       handle-error)))))
 
      ;; error recovery
      (define (handle-error-here)
@@ -105,10 +106,11 @@
        (let* ((rhs-length (length (item-rhs item)))
 	      (attribution (production-attribution
 			    (item-production item))))
-	 (set! *attribute-value*
-	       (apply-attribution
-		attribution
-		(c-take rhs-length attribute-values)))
+	 (_memo
+	  (set! *attribute-value*
+		(apply-attribution
+		 attribution
+		 (c-take rhs-length attribute-values))))
 
 	 ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
 				   shift-nonterminal)
@@ -124,7 +126,7 @@
 			     handle-error))
 	   (maybe-shift-nonterminal
 	    (and (not (null? the-next-nonterminals))
-		 (_memo shift-nonterminal))))
+		 shift-nonterminal)))
        (cond
 	((stream-empty? *input*)
 	 (cond
@@ -188,5 +190,4 @@
 (define-primitive cons - pure)
 
 (define (apply-attribution a l)
-  (_memo
-   (apply (eval a (interaction-environment)) (c-list->list (c-reverse l)))))
+  (apply (eval a (interaction-environment)) (c-list->list (c-reverse l))))
