@@ -33,9 +33,9 @@
   (let* ((non-empties (filter (lambda (lookahead+item)
 				(not (null? (car lookahead+item)))) 
 			      lookaheads+items))
-	 (one-lookaheads (map (lambda (lookahead+item)
-				(car (car lookahead+item)))
-			      non-empties))
+	 (one-lookaheads (uniq (map (lambda (lookahead+item)
+				      (car (car lookahead+item)))
+				    non-empties)))
 	 (static-terminal (maybe-the-member terminal 
 					    one-lookaheads))
 	 (matches
@@ -58,3 +58,11 @@
 	  (else
 	   (loop (cdr l) r)))))
 
+(define (uniq l)
+  (let loop ((l l) (r '()))
+    (if (null? l)
+	(reverse r)
+	(loop (cdr l)
+	      (if (member (car l) r)
+		  r
+		  (cons (car l) r))))))
