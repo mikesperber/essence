@@ -37,6 +37,7 @@
 	  active next-terminals next-nonterminals
 	  make-item
 	  item-lhs item-rhs item-production item-lookahead
+	  display-item
 	  check-for-reduce-reduce-conflict check-for-shift-reduce-conflict))
 
 (define-interface parser-interface
