@@ -2,10 +2,11 @@
 ;; ===================================
 
 (define-memo _memo 1)
+(define-primitive error - error)
 
 (define (ds-parse grammar k compute-closure state input)
   (_memo
-   (let ((closure (compute-closure state grammar)))
+   (let ((closure (compute-closure state)))
 
      (define (reduce)
        (cond
@@ -17,7 +18,7 @@
 		    (ds-parse-bar grammar k compute-closure
 				  closure lhs input)
 		    (parse-result lhs rhs-length input)))))
-	(else (_error "parse error"))))
+	(else (error "parse error"))))
 
      (cond
       ((stream-empty? input) (reduce))
@@ -43,7 +44,9 @@
 	  (parse-result lhs (- dot 1) input))
 	 ((and (initial? closure grammar)
 	       (equal? (grammar-start grammar) lhs))
-	  'accept)
+	  (if (stream-empty? input)
+	      'accept
+	      (error "parse error")))
 	 (else
 	  (ds-parse-bar grammar k compute-closure
 			closure
@@ -66,10 +69,10 @@
     (ds-parse grammar
 	      k
 	      (if (equal? method 'lr)
-		  (lambda (state grammar)
+		  (lambda (state)
 		    (compute-lr-closure state grammar k first-map))
 		  (let ((follow-map (compute-follow grammar k first-map)))
-		    (lambda (state grammar)
+		    (lambda (state)
 		      (compute-slr-closure state grammar k follow-map))))
 	      (list (make-item start-production 0 '()))
 	      input)))
