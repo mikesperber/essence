@@ -41,7 +41,7 @@
 		       (goto closure symbol) input)))
     (cond
      ((null? the-next-nonterminals)
-      (values lhs (- dot 1) input))
+      (- dot 1))
      ((> dot 1)
       (- dot 1))
      ((and (initial? closure grammar)
