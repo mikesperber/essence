@@ -15,7 +15,7 @@
 		 (lhs (item-lhs item)))
 	     (if (zero? rhs-length)
 		 (ds-parse-bar grammar k compute-closure
-			       lhs input)
+			       state lhs input)
 		 (values lhs rhs-length input)))))
      (else (error "parse error")))))
 
