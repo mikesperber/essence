@@ -1,18 +1,56 @@
 (define-without-memoization
-  (select-lookahead-item item-set k input cont fail)
-  (let loop ((trie (items->trie item-set k)) (input input) (pos 0))
-    (if (null? trie)
-        (fail)
-        (if (= pos k)
-            (cont trie)
-            (let* ((ch (stream-car input)))
-              (let inner-loop ((trie trie))
-                (if (null? trie)
-                    (fail)
-		    (let la-loop ((la-set (caar trie)))
-		      (cond ((equal? ch (car la-set))
-			     (loop (cdar trie) (stream-cdr input) (+ pos 1)))
-			    ((null? (cdr la-set))
-			     (inner-loop (cdr trie)))
-			    ((la-loop (cdr la-set))
-			     (loop (cdar trie) (stream-cdr input) (+ pos 1))))))))))))
+  (find-lookahead-item item-set k input)
+  (let loop ((lookaheads+items (map (lambda (item)
+				      (cons (item-lookahead item)
+					    item))
+				    item-set))
+	     (k k)
+	     (input input))
+    (cond
+     ((null? lookaheads+items)
+      #f)
+     ((or (zero? k) (null? (cdr lookaheads+items)))
+      (cdar lookaheads+items))
+     ((stream-empty? input)
+      (let ((empties
+	     (filter (lambda (lookahead+item)
+		       (null? (car lookahead+item)))
+		     lookaheads+items)))
+	(if (null? empties)
+	    #f
+	    (cdar empties))))
+     (else
+      (loop (filter-lookaheads+items lookaheads+items
+				     (car (stream-car input)))
+	    (- k 1)
+	    (stream-cdr input))))))
+
+(define (filter-lookaheads+items lookaheads+items terminal)
+  (let* ((non-empties (filter (lambda (lookahead+item)
+				(not (null? (car lookahead+item)))) 
+			      lookaheads+items))
+	 (one-lookaheads (map (lambda (lookahead+item)
+				(car (car lookahead+item)))
+			      non-empties))
+	 (static-terminal (maybe-the-member terminal 
+					    one-lookaheads))
+	 (matches
+	  (filter
+	   (lambda (lookahead+item)
+	     (equal? static-terminal (caar lookahead+item)))
+	   non-empties)))
+
+    (map (lambda (lookahead+item)
+	   (cons (cdr (car lookahead+item))
+		 (cdr lookahead+item)))
+	 matches)))
+
+(define (filter pred l)
+  (let loop ((l l) (r '()))
+    (cond ((null? l)
+	   (reverse r))
+          ((pred (car l))
+	   (loop (cdr l) (cons (car l) r)))
+          (else
+	   (loop (cdr l) r)))))
+
