@@ -1,0 +1,57 @@
+Installation instructions for Esssence
+======================================
+
+For building and running Essence, you need an installed version of
+Scheme 48, version 0.51 or higher.  Essence has been tested with 0.51
+thru 0.53.
+
+Before installation, run ./configure in the Essence toplevel
+directory. This shell script attempts to guess correct values for
+various system-dependent variables used during compilation, and
+creates the Makefile.  (Currently, it mainly sets the installation
+directory and figures out what program to use for installing files.)
+
+If you're using `csh' on an old version of System V, you might need to
+type `sh configure' instead to prevent `csh' from trying to execute
+`configure' itself.
+
+You may need to set the values of some other variables in Makefile.in
+prior to running configure.  If your Scheme 48 binary is in the path
+as "scheme48", chances are you won't have to, however.
+
+After running configure, run `make'.  There are two interesting
+targets:
+
+- Just `make' or `make default' will build an Scheme 48 images with
+  Essence loaded: essence.image.  This image is good for incremental
+  development of Essence parsers as described in the implementation.
+  Start it up with `scheme48 -i essence.image -h 8000000'.  (The
+  actual heapsize required for Essence may vary.)
+
+  This target will also generate a shell script called `essence' which
+  is a batch version of Essence.  Documentation is in the manpage and
+  in doc/essence.ps or doc/html/essence.html, respectively.
+
+- `make install' will install Essence as a Unix software package.  By
+  default, `make install' will install the package's files in
+  `/usr/local/bin', `/usr/local/man', etc.  You can specify an
+  installation prefix other than `/usr/local' by giving `configure'
+  the option `--prefix=PATH'.  Alternately, you can do so by
+  giving a value for the `prefix' variable when you run
+  `make install', e.g.,
+     make prefix=/opt install
+
+  You can specify separate installation prefixes for
+  architecture-specific files and architecture-independent files.  If
+  you give `configure' the option `--exec-prefix=PATH' or set the
+  `make' variable `exec_prefix' to PATH, the package will use PATH as
+  the prefix for installing programs and libraries.  Data files and
+  documentation will still use the regular prefix.  Normally, all
+  files are installed using the same prefix.
+
+For other targets and options, consult Makefile.in.
+
+Enjoy!
+
+Mike Sperber <sperber@informatik.uni-tuebingen.de>
+Peter Thiemann <thiemann@informatik.uni-tuebingen.de>

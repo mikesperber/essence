@@ -99,7 +99,7 @@ PARSER_ALL_SOURCE_FILES = \
 	$(GENEXT_DIRECTORY)/*
 
 PARSER_DOC_FILES = \
-	COPYING README INSTALL MANIFEST \
+	COPYING README INSTALL \
 	doc/essence.tex doc/essence.bbl doc/essence.ps doc/html/* \
 	doc/$(RUNNABLE).man
 
@@ -135,7 +135,7 @@ IMAGE = essence.image
 
 BATCH_IMAGE = essence-batch.image
 
-default: batch
+default: $(RUNNABLE)
 
 install: install-directories install-script install-share install-images \
 	install-documentation
@@ -165,7 +165,7 @@ $(RUNNABLE): batch
 	     >>$$script &&						\
 	chmod +x $$script
 
-install-documentation: doc/essence.ps doc/html/essence.html
+install-documentation: documentation
 	$(INSTALL_DATA) doc/$(RUNNABLE).man $(mandir)/$(RUNNABLE).$(manext)
 	$(INSTALL_DATA) doc/essence.ps $(docdir)
 	cd doc/html; 							\
@@ -209,7 +209,7 @@ pristine: distclean
 	rm -f configure
 	rm -f $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm
 	rm -rf $(GENEXT_DIRECTORY)
-	rm -rf doc/essence.ps doc/essence/html
+	rm -rf doc/essence.ps doc/essence.bbl doc/essence/html
 
 batch: $(BATCH_IMAGE)
 
@@ -294,6 +294,8 @@ $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm: \
 	         #t)";							\
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(PGG_HEAPSIZE)
+
+documentation: doc/essence.ps doc/html/essence.html
 
 doc/essence.bbl:
 	cd doc; $(LATEX) essence; $(BIBTEX) essence
