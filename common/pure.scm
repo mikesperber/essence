@@ -6,3 +6,5 @@
 (define-primitive car - pure)
 (define-primitive cdr - pure)
 (define-primitive not - pure)
+(define-primitive - - pure)
+(define-primitive zero? - pure)
