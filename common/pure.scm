@@ -1,0 +1,8 @@
+;; (define-primitive = - pure)
+;; (define-primitive equal? - pure)
+(define-primitive stream-car - pure)
+(define-primitive stream-cdr - pure)
+(define-primitive stream-empty? - pure)
+(define-primitive car - pure)
+(define-primitive cdr - pure)
+(define-primitive not - pure)
