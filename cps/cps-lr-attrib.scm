@@ -8,7 +8,7 @@
 (define-memo _memo 1)
 (define-primitive error - error)
 
-(define
+(define-without-memoization
   (cps-parse grammar k compute-closure state
 	     continuations attribute-values
 	     input)
@@ -29,15 +29,16 @@
 		    input)))
      
      (define (shift-nonterminal nonterminal attribute-value input)
-       (if (and (initial? state grammar)
-		(equal? (grammar-start grammar) nonterminal))
-	   (if (stream-empty? input)
-	       attribute-value
-	       (error "parse error"))
-	   (shift
-	    (the-member nonterminal the-next-nonterminals)
-	    attribute-value
-	    input)))
+       (_memo
+	(if (and (initial? state grammar)
+		 (equal? (grammar-start grammar) nonterminal))
+	    (if (stream-empty? input)
+		attribute-value
+		(error "parse error"))
+	    (shift
+	     (the-member nonterminal the-next-nonterminals)
+	     attribute-value
+	     input))))
 
      (define (reduce item)
        (let* ((rhs-length (length (item-rhs item)))
