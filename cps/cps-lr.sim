@@ -50,30 +50,165 @@
 ; The real McCoy
 ; ~~~~~~~~~~~~~~
 
-(define (goto-cps state-closure symbol grammar c)
-  (let ((nonterm (next-nonterminals state-closure grammar)))
-    (if (null? nonterm)
-	#f
-	(let loop ((s nonterm))
-	  (if (null? (cdr s))
-	      (c (goto state-closure (car s)))
-	      (if (equal? (car s) symbol)
-		  (c (goto state-closure (car s)))
-		  (loop (cdr s))))))))
+(define (goto-cps state-closure symbol symbols c)
+  (and (not (null? symbols))
+       (let loop ((s symbols))
+	 (if (null? (cdr s))
+	     (c (goto state-closure (car s)))
+	     (if (equal? (car s) symbol)
+		 (c (goto state-closure (car s)))
+		 (loop (cdr s)))))))
 
-(define (cps-parse grammar k first-map state continuations attribute-values input)
+(define (select-lookahead-item-cps item-set k input c)
+  (let loop ((item-set item-set)
+	     (pos 0)
+	     (input input))
+    (if (= pos k)
+	(c (if (null? item-set) #f (car item-set)))
+	(if (null? item-set)
+	    (c #f)
+	    (let ((t (car (stream-car input))))
+	      (let loop-2 ((items item-set)
+			   (used-lookaheads '()))
+		(if (null? items)
+		    (c #f)
+		    (let* ((item (car items))
+			   (kth-lookahead (list-ref (item-lookahead item) pos)))
+		      (if (member kth-lookahead used-lookaheads)
+			  (loop-2 (cdr items) used-lookaheads)
+			  (if (equal? t kth-lookahead)
+			      (loop (filter-2 (lambda (item)
+						(equal?
+						 (list-ref (item-lookahead item) pos)
+						 kth-lookahead))
+					      item-set)
+				    (+ pos 1)
+				    (if (= (+ 1 pos) k)
+					'() ; so as to not touch (stream-cdr input)
+					(stream-cdr input)))
+			      (loop-2 (cdr items) (cons kth-lookahead used-lookaheads))))))))))))
+
+(define (handle-conflict! name item-1 item-2)
+  (_sim-display-immediate name)
+  (_sim-display-immediate " conflict in state ")
+  (_sim-write-immediate closure)
+  (_sim-newline-immediate)
+  (_sim-display-immediate "(items ")
+  (_sim-write-immediate item-1)
+  (_sim-display-immediate " and ")
+  (_sim-write-immediate item-2))
+
+(define (find-lookahead la items)
+  (let loop ((items items))
+    (and (not (null? items))
+	 (if (equal? (item-lookahead (car items)) la)
+	     (car items)
+	     (loop (cdr items))))))
+
+(define (check-for-conflict! grammar first-map closure accept-items k)
+  ;; check for reduce-reduce conflict
+  (let loop ((item-set accept-items))
+    (and (not (null? item-set))
+	 (let ((la-item (find-lookahead (item-lookahead (car item-set))
+					(cdr item-set))))
+	   (if la-item
+	       (handle-conflict! "Reduce-reduce" la-item (car item-set))
+	       (loop (cdr item-set))))))
+  ;; check for shift-reduce conflict
+  (let loop ((items closure))
+    (and (not (null? items))
+	 (if (null? (item-rhs-rest (car items)))
+	     (loop (cdr items))
+	     (let inner-loop ((fs (sf-first
+				   (append-k k
+					     (item-rhs-rest (car items))
+					     (item-lookahead (car items)))
+				   k grammar first-map)))
+	       (if (null? fs)
+		   (loop (cdr items))
+		   (let ((la-item (find-lookahead (car fs) accept-items)))
+		     (if la-item
+			 (handle-conflict! "Shift-reduce" (car items) la-item)
+			 (inner-loop (cdr fs))))))))))
+
+(define (cps-parse grammar k first-map state
+		   continuations attribute-values
+		   error error-status input)
 
   (if (and (final? state grammar)
 	   (equal? '$ (car (stream-car input))))
       (if (mynil? attribute-values)
-	  (_sim-error 'cps-parse "I didn't expect this!")
+	  (_sim-error 'cps-parse "This can't happen.")
 	  (mycar attribute-values))
-      (let* ((closure (closure state grammar k first-map))
+      (let* ((closure (compute-closure state grammar k first-map))
 	     (accept-items (accept closure)))
+
+	(define (error-here input error-status)
+
+	  (let* ((state (goto closure '@error@))
+		 (n-active (- (active state) 1))
+		 (closure (compute-closure state grammar k first-map))
+		 (accept-items (accept closure))
+		 (shift-terminals (next-terminals closure grammar))
+		 (attribute-value (car (stream-car input))))
+
+	    (define (recover input)
+	      (display "Recovering ...") (newline)
+	      (cps-parse grammar k first-map
+			 state
+			 (mycons (generalize1 c0)
+				 (my-take n-active continuations))
+			 (mycons attribute-value
+				 (my-take n-active attribute-values))
+			 error-here
+			 3
+			 input))
+
+	    (define (maybe-recover-with-shift input t ts failure)
+	      ;; (display ">>> maybe-recover-with-shift ") (write t) (display " ") (write ts) (newline)
+	      (let loop ((ts ts))
+		(if (null? ts)
+		    (failure)
+		    (if (equal? t (car ts))
+			(recover input)
+			(loop (cdr ts))))))
+
+	    (define (maybe-recover-with-reduce input accept-items failure)
+	      ;; (display ">>> maybe-recover-with-reduce ") (write accept-items) (newline)
+	      (if (not (null? accept-items))
+		  (select-lookahead-item-cps
+		   accept-items k input
+		   (lambda (item)
+		     (if item
+			 (recover input)
+			 (failure))))
+		  (failure)))
+
+	    (let loop ((input (if (= 3 error-status)
+				  ;; another error just happened
+				  (stream-cdr input)
+				  input)))
+	      (let* ((p (stream-car input))
+		     (t (car p)))
+
+		(if (equal? '$ t)
+
+		    (begin
+		      (display "error recovery failed: unexpected EOF") (newline)
+		      'parse-error)
+
+		    (maybe-recover-with-shift
+		     input t shift-terminals
+		     (lambda ()
+		       (maybe-recover-with-reduce
+			input accept-items
+			(lambda ()
+			  ;; (display "Skipping ") (write (stream-car input)) (newline)
+			  (loop (stream-cdr input)))))))))))
 
 	(define (c0 symbol attribute-value input)
 	  (goto-cps
-	   closure symbol grammar
+	   closure symbol (next-nonterminals closure grammar)
 	   (lambda (next-state)
 	     (let ((n-active (- (active next-state) 1)))
 	       (cps-parse grammar k first-map
@@ -82,118 +217,65 @@
 				  (my-take n-active continuations))
 			  (mycons attribute-value
 				  (my-take n-active attribute-values))
+			  (if (member '@error@ (next-terminals closure grammar))
+			      error-here
+			      error)
+			  error-status
 			  input)))))
 
+	;; this is essentially c0 with symbol static
+	(define (shift-nonterminal symbol attribute-value input)
+	  (let* ((next-state (goto closure symbol))
+		 (n-active (- (active next-state) 1)))
+	    (cps-parse grammar k first-map
+		       next-state
+		       (mycons (generalize1 c0)
+			       (my-take n-active continuations))
+		       (mycons attribute-value
+			       (my-take n-active attribute-values))
+		       (if (member '@error@ (next-terminals closure grammar))
+			   error-here
+			   error)
+		       error-status
+		       input)))
+
 	(define (shift-terminal token attribute-value)
-	  (let loop ((ts (next-terminals closure grammar)))
-	    (if (null? ts)
-		(_sim-error 'cps-parse "Syntax Terror, call the bomb squad!")
-		(if (equal? token (car ts))
-		    (let* ((next-state (goto closure (car ts)))
-			   (n-active (- (active next-state) 1)))
-		      (cps-parse grammar k first-map
-				 next-state
-				 (mycons (generalize1 c0)
-					 (my-take n-active continuations))
-				 (mycons attribute-value
-					 (my-take n-active attribute-values))
-				 (stream-cdr input)))
-		    (loop (cdr ts))))))
-
-	(define (shift-nonterminal s attribute-value)
-	  (let loop ((ss (next-nonterminals closure grammar)))
-	    (if (equal? s (car ss))
-		(let* ((next-state (goto closure (car ss)))
-		       (n-active (- (active next-state) 1)))
-		  (cps-parse grammar k first-map
-			     next-state
-			     (mycons (generalize1 c0)
-				     (my-take n-active continuations))
-			     (mycons attribute-value
-				     (my-take n-active attribute-values))
-			     input))
-		(loop (cdr ss)))))
-
-	(define (select-lookahead-item-cps item-set input c)
-	  (let loop ((item-set item-set)
-		     (pos 0)
-		     (input input))
-	    (if (= pos k)
-		(c (if (null? item-set) #f (car item-set)))
-		(if (null? item-set)
-		    (c #f)
-		    (let ((t (car (stream-car input))))
-		      (let loop-2 ((items item-set)
-				   (used-lookaheads '()))
-			
-			(if (null? items)
-			    (c #f)
-			    (let* ((item (car items))
-				   (kth-lookahead (list-ref (item-lookahead item) pos)))
-			      (if (member kth-lookahead used-lookaheads)
-				  (loop-2 (cdr items) used-lookaheads)
-				  (if (equal? t kth-lookahead)
-				      (loop (filter-2 (lambda (item)
-							(equal?
-							 (list-ref (item-lookahead item) pos)
-							 kth-lookahead))
-						      item-set)
-					    (+ pos 1)
-					    (if (= (+ 1 pos) k)
-						'() ; so as to not touch (stream-cdr input)
-						(stream-cdr input)))
-				      (loop-2 (cdr items) (cons kth-lookahead used-lookaheads))))))))))))
-	    
+	  (let ((nts (next-terminals closure grammar)))
+	    (let loop ((ts nts))
+	      (if (null? ts)
+		  (begin
+		    (display "parse error: expected one of ")
+		    (write nts)
+		    (display " or ")
+		    (write (items-lookaheads accept-items))
+		    (newline)
+		    (error input error-status))
+		  (if (equal? token (car ts))
+		      (let* ((next-state (goto closure (car ts)))
+			     (n-active (- (active next-state) 1)))
+			(cps-parse grammar k first-map
+				   next-state
+				   (mycons (generalize1 c0)
+					   (my-take n-active continuations))
+				   (mycons attribute-value
+					   (my-take n-active attribute-values))
+				   (if (member '@error@ nts)
+				       error-here
+				       error)
+				   (if (zero? error-status)
+				       error-status
+				       (- error-status 1))
+				   (stream-cdr input)))
+		      (loop (cdr ts)))))))
 
 
-	(define (handle-conflict! name item-1 item-2)
-	  (_sim-display-immediate name)
-	  (_sim-display-immediate " conflict in state ")
-	  (_sim-write-immediate closure)
-	  (_sim-newline-immediate)
-	  (_sim-display-immediate "(items ")
-	  (_sim-write-immediate item-1)
-	  (_sim-display-immediate " and ")
-	  (_sim-write-immediate item-2))
-
-	(define (find-lookahead la items)
-	  (let loop ((items items))
-	    (if (null? items)
-		#f
-		(if (equal? (item-lookahead (car items)) la)
-		    (car items)
-		    (loop (cdr items))))))
-
-	;; check for reduce-reduce conflict
-	(let loop ((item-set accept-items))
-	  (and (not (null? item-set))
-	       (let ((la-item (find-lookahead (item-lookahead (car item-set))
-					      (cdr item-set))))
-		 (if la-item
-		     (handle-conflict! "Reduce-reduce" la-item (car item-set))
-		     (loop (cdr item-set))))))
-	;; check for shift-reduce conflict
-	(let loop ((items closure))
-	  (and (not (null? items))
-	       (if (null? (item-rhs-rest (car items)))
-		  (loop (cdr items))
-		  (let inner-loop ((fs (sf-first
-					(append-k k
-						  (item-rhs-rest (car items))
-						  (item-lookahead (car items)))
-					k grammar first-map)))
-		    (if (null? fs)
-			(loop (cdr items))
-			(let ((la-item (find-lookahead (car fs) accept-items)))
-			  (if la-item
-			      (handle-conflict! "Shift-reduce" (car items) la-item)
-			      (inner-loop (cdr fs)))))))))
+	(check-for-conflict! grammar first-map closure accept-items k)
 
 	(if (null? accept-items)
 	    (let* ((p (stream-car input)))
 	      (shift-terminal (car p) (cdr p)))
 	    (select-lookahead-item-cps
-	     accept-items input
+	     accept-items k input
 	     (lambda (item)
 	       (if (not item)
 		   (let* ((p (stream-car input)))
@@ -210,7 +292,7 @@
 					
 		     ;; reduce, then shift on lhs
 		     (if (zero? rhs-length)
-			 (shift-nonterminal (item-lhs item) attribute-value)
+			 (shift-nonterminal (item-lhs item) attribute-value input)
 			 ((my-list-ref continuations (- rhs-length 1))
 			  (item-lhs item)
 			  attribute-value
@@ -229,4 +311,9 @@
 			   (cdr (production-rhs start-production))))
 	       (mynil)
 	       (mynil)
+	       (lambda (input error-status)
+		 (begin
+		   (display "parse error: no recovery possible")
+		   'parse-error))
+	       0
 	       input)))
