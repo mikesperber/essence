@@ -15,9 +15,11 @@
   (list-ref g 4))
 
 (define eoi-terminal 0)
+(define (make-eoi-terminal) eoi-terminal)
 
 (define error-terminal 1)
-  
+(define (make-error-terminal) error-terminal)
+
 (define first-terminal-index 2)
 
 (define (terminal->index terminals terminal)
