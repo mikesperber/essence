@@ -136,8 +136,26 @@
      ((P n))
      ((P l E r) $2))
     E))
+
+(define g10-error-attrib
+  '((E T P)
+    (+ - * / l r n)
+    (((E T)) ; trivial copying rule
+     ((E @error@) 0)
+     ((E T + E) (+ $1 $3))
+     ((E T - E) (- $1 $3))
+     ((T P))
+     ((T P * T) (* $1 $3))
+     ((T P / T) (/ $1 $3))
+     ((P n))
+     ((P l E r) $2)
+     ((P l @error@ r) 0))
+    E))
+
     
 (define i10-1 '((l . #f) (n . 4) (+ . #f) (n . 17) (r . #f) (* . #f) (n . 7)))
+
+(define i10-2 '((l . #f) (n . 4) (+ . #f) (n . 15) (n . 17) (r . #f) (* . #f) (n . 7)))
 
 
 (define g11         ; Logical Expressions
