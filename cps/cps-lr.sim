@@ -2,6 +2,7 @@
 ; ====================
 
 (loadt "cps-lr.adt")
+(loadt "stream.adt")
 
 (define (generalize1 z)
   (if #t z (generalize z)))
@@ -58,7 +59,7 @@
 (define (cps-parse grammar k first-map state input continuations)
 
   (if (and (final? state grammar)
-	   (equal? '$ (car input)))
+	   (equal? '$ (stream-car input)))
       'accept
       (let* ((closure (closure state grammar k first-map))
 	     (accept-items (accept closure)))
@@ -73,19 +74,18 @@
 			(mycons (collapse-2 c0)
 				(my-take (- (active next-state) 1) continuations))))))
 
-	(define (shift-term)
-	  (let ((t (car input)))
-	    (let loop ((ts (nextterm closure grammar)))
-	      (if (null? ts)
-		  (_sim-error 'cps-parse "Syntax Terror, call the bomb squad!")
-		  (if (equal? t (car ts))
-		      (let* ((next-state (goto closure (car ts))))
-			(cps-parse grammar k first-map
-				   next-state
-				   (cdr input)
-				   (mycons (collapse-2 c0)
-					   (my-take (- (active next-state) 1) continuations))))
-		      (loop (cdr ts)))))))
+	(define (shift-term t)
+	  (let loop ((ts (nextterm closure grammar)))
+	    (if (null? ts)
+		(_sim-error 'cps-parse "Syntax Terror, call the bomb squad!")
+		(if (equal? t (car ts))
+		    (let* ((next-state (goto closure (car ts))))
+		      (cps-parse grammar k first-map
+				 next-state
+				 (stream-cdr input)
+				 (mycons (collapse-2 c0)
+					 (my-take (- (active next-state) 1) continuations))))
+		    (loop (cdr ts))))))
 
 	(define (shift-nonterm s)
 	  (let loop ((ss (nextnonterm closure grammar)))
@@ -106,7 +106,7 @@
 		(c (if (null? item-set) #f (car item-set)))
 		(if (null? item-set)
 		    (c #f)
-		    (let ((t (car input)))
+		    (let ((t (stream-car input)))
 		      (let loop-2 ((items item-set)
 				   (used-lookaheads '()))
 			
@@ -131,11 +131,11 @@
 	(define (reduce)
 	  (let ((item-set accept-items))
 	    (if (null? item-set)
-		(shift-term)
+		(shift-term (stream-car input))
 		(select-lookahead-item-the-trick item-set input
 		 (lambda (item)
 		   (if (not item)
-		       (shift-term)
+		       (shift-term (stream-car input))
 		       (let ((rhs-length (length (item-rhs item))))
 ;			 (display "Reducing by ") (write item) (newline)
 			 ; reduce, then shift on lhs
@@ -222,6 +222,6 @@
 				       $s))
 			   0
 			   $s))
-	       (append input (cons '$ $s))
+	       (list->stream (append input (cons '$ $s)))
 	       (mynil))))
 
