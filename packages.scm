@@ -11,18 +11,18 @@
 	  list->stream))
 
 (define-interface grammar-interface
-  (export make-production
-	  grammar-productions grammar-nonterminals
+  (export grammar-productions grammar-nonterminals
 	  grammar-start grammar-error
+	  grammar-productions-with-lhs
 	  production-lhs production-rhs production-attribution
-	  productions-with-lhs
 
 	  grammar-start-production
 	  terminal? nonterminal?
 	  (define-grammar :syntax)
 
-	  compute-nullable?
-	  compute-first sf-first compute-follow))
+	  nonterminal-nullable? sequence-nullable?
+	  nonterminal-first sequence-first
+	  nonterminal-follow))
 
 (define-interface scc-union-interface
   (export complete-subsets!))
