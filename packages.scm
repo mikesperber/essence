@@ -40,6 +40,10 @@
 	  display-item
 	  check-for-reduce-reduce-conflict check-for-shift-reduce-conflict))
 
+(define-interface lr-runtime-interface
+  (export move-error-status
+	  advance-input))
+
 (define-interface parser-interface
   (export parse))
 
@@ -55,7 +59,7 @@
   (files (common stream)))
 
 (define-structure grammar grammar-interface
-  (open scheme big-scheme scc-union)
+  (open scheme big-util defrecord enumerated scc-union)
   (files (common grammar)))
 
 (define-structure scc-union scc-union-interface
@@ -63,8 +67,12 @@
   (files (common scc-union)))
 
 (define-structure lr-spectime lr-spectime-interface
-  (open scheme big-scheme grammar)
+  (open scheme big-util sort grammar)
   (files (common lr-spectime)))
+
+(define-structure lr-runtime lr-runtime-interface
+  (open scheme stream signals)
+  (files (common lr-runtime)))
 
 (define-structure ds-lr-naive parser-interface
   (open scheme signals grammar lr-spectime stream
@@ -107,14 +115,14 @@
 	 (cps cps-lr-attrib)))
 
 (define-structure cps-lr-attrib-error parser-interface
-  (open scheme signals grammar lr-spectime stream
+  (open scheme signals grammar lr-spectime stream lr-runtime
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
 	 (cps cps-lr-attrib-error)))
 
 (define-structure cps-lr parser-interface
-  (open scheme signals grammar lr-spectime stream
+  (open scheme signals grammar lr-spectime stream lr-runtime
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
