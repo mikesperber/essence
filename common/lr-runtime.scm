@@ -17,5 +17,5 @@
 	(interaction-environment)))
        
 (define (terminate-input-list input k)
-  (append input (make-list k eoi-terminal)))
+  (append input (make-list k (eoi-terminal))))
 

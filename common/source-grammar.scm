@@ -14,11 +14,9 @@
 (define (source-grammar-terminal-attribution g)
   (list-ref g 4))
 
-(define eoi-terminal 0)
-(define (make-eoi-terminal) eoi-terminal)
+(define (eoi-terminal g) 0)
 
-(define error-terminal 1)
-(define (make-error-terminal) error-terminal)
+(define (error-terminal g) 1)
 
 (define first-terminal-index 2)
 

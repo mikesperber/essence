@@ -118,8 +118,8 @@
   (vector-ref p 3))
 
 (define (terminal? sym grammar)
-  (or (equal? eoi-terminal sym)
-      (equal? error-terminal sym)
+  (or (equal? (eoi-terminal) sym)
+      (equal? (error-terminal) sym)
       (member sym (grammar-terminals grammar))))
 
 (define (nonterminal? sym grammar)

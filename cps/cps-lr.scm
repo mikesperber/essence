@@ -9,7 +9,7 @@
   (parse grammar k compute-closure state continuations input)
   (_memo
    (if (final? state grammar)
-       (if (equal? eoi-terminal (car input))
+       (if (equal? (eoi-terminal) (car input))
 	   'accept
 	   'error)
        (let* ((closure (compute-closure state grammar))
