@@ -51,24 +51,18 @@
   (let* ((start-production (grammar-start-production grammar))
 	 (first-map (compute-first grammar k)))
 
-    (cond
-     ((equal? method 'lr)
-      (cps-parse grammar
-		 k
-		 (lambda (state grammar)
-		   (compute-lr-closure state grammar k first-map))
-		 (list (make-item start-production 0 '()))
-		 (c-nil)
-		 input))
-     ((equal? method 'slr)
-      (let ((follow-map (compute-follow grammar k first-map)))
-	(cps-parse grammar
-		   k
-		   (lambda (state grammar)
-		     (compute-slr-closure state grammar k follow-map))
-		   (list (make-item start-production 0 '()))
-		   (c-nil)
-		   input))))))
+    (cps-parse
+     grammar
+     k
+     (if (equal? method 'lr)
+	 (lambda (state grammar)
+	   (compute-lr-closure state grammar k first-map))
+	 (let ((follow-map (compute-follow grammar k first-map)))
+	   (lambda (state grammar)
+	     (compute-slr-closure state grammar k follow-map))))
+     (list (make-item start-production 0 '()))
+     (c-nil)
+     input)))
 
 (define (c-take n l)
   (if (zero? n)
