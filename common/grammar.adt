@@ -63,9 +63,9 @@
 		  result)))))
 
 (defprim (or-map pred? list)
-  (or (null? list)
-      (pred? (car list))
-      (or-map pred? (cdr list))))
+  (and (not (null? list))			;;;; was (or (null? list) ...)
+       (or (pred? (car list))
+	   (or-map pred? (cdr list)))))
 
 (defprim (partition-list pred l)
   (let loop ((l l) (yes '()) (no '()))
@@ -128,7 +128,60 @@
 	       (symbols->string (car y))))
    selection))
 
+;;; this should be the real thing
+;;; trie of depth k: k nested alists
+;;; needs at least one item
+(defprim (build-trie items)
+  (let* ((item (car items))
+	 (items (cdr items))
+	 (trie (let loop ((la (item-lookahead item)))
+		 (if (null? la)
+		     (item-production item)
+		     (list (cons (car la) (loop (cdr la))))))))
+    (let loop ((items items) (trie trie))
+      (if (null? items)
+	  trie
+	  (loop (cdr items)
+		(let loop ((la (item-lookahead (car items))) (trie trie))
+		  (if (null? la)
+		      (item-production (car items))
+		      (let ((car-la (car la)))
+			(let inner-loop ((trie trie))
+			  (if (null? trie)
+			      (list (cons car-la (loop (cdr la) '())))
+			    (if (equal? car-la (caar trie))
+				(cons (cons car-la (loop (cdr la) (cadr trie)))
+				      (cdr trie))
+				(cons (car trie)
+				      (inner-loop (cdr trie))))))))))))))
 
+(defprim (sort-trie trie k)
+  (let ((subject
+	 (if (> k 1)
+	     (map (lambda (p) (cons (car p) (sort-trie (cdr p) (- k 1)))) trie)
+	     trie)))
+    (sort-generic (lambda (p q)
+		    (string<=? (symbol->string (car p))
+			       (symbol->string (car q)))) subject)))
+
+(defprim (collapse-trie trie k)
+  (let ((subject
+	 (if (> k 1)
+	     (map (lambda (p) (cons (car p) (collapse-trie (cdr p) (- k 1)))) trie)
+	     trie)))
+    (let loop ((first (car subject)) (rest (cdr subject)))
+      (let* ((first-la (car first))
+	     (first-trie (cdr first))
+	     (yes/no (partition-list (lambda (p) (equal? first-trie (cdr p))) rest))
+	     (yes (car yes/no))
+	     (no (cdr yes/no)))
+	(cons (cons (cons first-la (map car yes)) first-trie)
+	      (if (null? no)
+		  '()
+		  (loop (car no) (cdr no))))))))
+
+(defprim (items->trie item-set k)
+  (collapse-trie (sort-trie (build-trie item-set) k) k))
 
 ; Grammars
 ; ========

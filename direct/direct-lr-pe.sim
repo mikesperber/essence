@@ -8,6 +8,8 @@
 ;;; step 1: plain parser
 ;;; step 2: attribute evaluation
 
+(defprim (my-list-tail l k) (list-tail l k))
+
 ;;; primitives
 
 (defprim (parse-result the-lhs the-dot the-attribute the-inp)
@@ -69,7 +71,7 @@
 
   (if (and (final? state grammar)
 	   (equal? '$ (input-char (stream-car input))))
-      'success
+      (car attribute-stack)
       (let* ((closure (compute-closure state grammar k first-map))
 	     (ts (next-terminals closure grammar))
 	     (ts (if (final? state grammar)
@@ -80,37 +82,24 @@
 ;;; local definitions
 
   (define (select-lookahead-item item-set k input)
-    (select-lookahead-item1 item-set 0 k input))
-  (define (select-lookahead-item1 item-set pos k input)
-    (if (= pos k)
-	(continue (if (null? item-set) #f (item-production (car item-set))))	; RETURN
-	(if (null? item-set)
-	    (continue #f)					; RETURN
-	    (select-lookahead-item2 item-set pos k input
-				    (input-char (stream-car input)) item-set '()))))
-  (define (select-lookahead-item2 item-set pos k input
-				  t items used-lookaheads)
-    (if (null? items)
-	(continue #f)				; RETURN
-	(let* ((item (car items))
-	       (kth-lookahead (list-ref (item-lookahead item) pos)))
-	  (if (member kth-lookahead used-lookaheads)
-	      (select-lookahead-item2 item-set pos k input
-				      t (cdr items) used-lookaheads)
-	      (if (equal? t kth-lookahead)
-		  (select-lookahead-item1
-		   (filter-2 (lambda (item)
-			       (equal?
-				(list-ref (item-lookahead item) pos)
-				kth-lookahead))
-			     item-set)
-		   (+ pos 1)
-		   k
-		   (if (= (+ 1 pos) k)
-		       '() ; so as to not touch (stream-cdr input)
-		       (stream-cdr input)))
-		  (select-lookahead-item2 item-set pos k input
-					  t (cdr items) (cons kth-lookahead used-lookaheads)))))))
+    (let loop ((trie (items->trie item-set k)) (pos 0) (input input))
+      (if (null? trie)
+	  (continue #f)
+	  (if (= pos k)
+	      (continue trie)
+	      (let ((ch (stream-car input)))
+		(let inner-loop ((trie trie))
+		  (if (null? trie)
+		      (continue #f)
+		      (if (let loop ((la-set (caar trie)))
+			    (or (equal? ch (car la-set))
+				(if (null? (cdr la-set))
+				    #f
+				    (loop (cdr la-set)))))
+			  (loop (cdar trie)
+				(+ pos 1)
+				(if (= (+ pos 1) k) '() (stream-cdr input)))
+			  (inner-loop (cdr trie))))))))))
 
   (define (continue production)
     (if (not production)
@@ -162,7 +151,7 @@
 			       (push attribute-value attribute-stack)
 			       input)))
     (if (final? next-state grammar)
-	'success
+	result
 	(let* ((the-lhs (result-lhs result))
 	       (the-dot (result-dot result))
 	       (the-att (result-att result))
