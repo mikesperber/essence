@@ -10,7 +10,7 @@
 (define
   (cps-parse grammar k compute-closure state continuations input)
   (_memo
-   (let* ((closure (compute-closure state grammar))
+   (let* ((closure (compute-closure state))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
      (define (shift symbol input)
@@ -30,7 +30,8 @@
 	 (shift
 	  (the-member nonterminal the-next-nonterminals)
 	  input))
-	(else 'accept)))
+	((stream-empty? input) 'accept)
+	(else 'error)))
 
      (define (reduce)
        (cond
@@ -59,10 +60,10 @@
      grammar
      k
      (if (equal? method 'lr)
-	 (lambda (state grammar)
+	 (lambda (state)
 	   (compute-lr-closure state grammar k first-map))
 	 (let ((follow-map (compute-follow grammar k first-map)))
-	   (lambda (state grammar)
+	   (lambda (state)
 	     (compute-slr-closure state grammar k follow-map))))
      (list (make-item start-production 0 '()))
      (c-nil)
