@@ -1,0 +1,11 @@
+(loads "direct-lr.sim")
+(load "../../henrik/src/util.scm")
+(define direct-lr.sim (file->list "direct-lr.sim"))
+(define direct-lr.s1 (ins-call/apply direct-lr.sim))
+(writelpp direct-lr.s1 "direct-lr.s1")
+(preprocess! 's1-int '(s s d d) "../../henrik/src/eval.sim")
+(define similix-residual-program
+	(similix (list '(direct-parse-main s s d) direct-lr.s1 '*** '***)))
+(writelpp similix-residual-program "direct-lr.residual")
+,exit
+
