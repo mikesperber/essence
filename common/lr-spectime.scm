@@ -170,7 +170,7 @@
 	   (let ((production (item-production item)))
 	     (map (lambda (la)
 		    (make-item production (item-position item) la))
-		  (cdr (assoc (production-lhs production) follow-map)))))))
+		  (vector-ref follow-map (production-lhs production)))))))
     (flatten (map add-one-slr-lookahead item-set))))
 
 ; Operations on LR states
