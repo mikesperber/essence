@@ -34,7 +34,8 @@
        (_memo
 	(let ((handle-error (if (handles-error? closure grammar)
 				handle-error-here
-				handle-error)))
+				handle-error))
+	      (shift-nonterminal shift-nonterminal))
 	  (if (and (initial? state grammar)
 		   (equal? (grammar-start grammar) nonterminal))
 	      (if (stream-empty? *input*)
