@@ -21,8 +21,12 @@
 	  terminal? nonterminal?
 	  (define-grammar :syntax)
 
+	  compute-nullable?
 	  compute-first sf-first compute-follow))
-	 
+
+(define-interface scc-union-interface
+  (export complete-subsets!))
+
 (define-interface lr-spectime-interface
   (export compute-lr-closure
 	  compute-slr-closure add-slr-lookahead
@@ -49,12 +53,17 @@
   (open scheme big-scheme)
   (files (common grammar)))
 
+(define-structure scc-union scc-union-interface
+  (open scheme)
+  (files (common scc-union)))
+
 (define-structure lr-spectime lr-spectime-interface
   (open scheme big-scheme grammar)
   (files (common lr-spectime)))
 
 (define-structure ds-lr-naive parser-interface
-  (open scheme signals grammar lr-spectime stream)
+  (open scheme signals grammar lr-spectime stream
+	cogen-directives) ; DEFINE-WITHOUT-MEMOIZATION
   (files (common lookahead)
 	 (direct direct-lr-naive)))
 
