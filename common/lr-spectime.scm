@@ -64,7 +64,7 @@
 		 (and (member (car is-1) is-2)
 		      (loop (cdr is-1)))))))
 
-(define (compute-lr-closure state grammar k first-map)
+(define (compute-lr-closure state grammar k)
 
   (define (initial-items symbol lookahead-suffix)
     (flatten
@@ -72,8 +72,8 @@
 	    (map
 	     (lambda (la)
 	       (make-item production 0 la))
-	     (sf-first lookahead-suffix k grammar first-map)))
-	  (productions-with-lhs symbol grammar))))
+	     (sequence-first lookahead-suffix k grammar)))
+	  (grammar-productions-with-lhs symbol grammar))))
 
   (define (next-predict item-set)
     (let loop ((item-set item-set) (predict-set item-set))
@@ -102,7 +102,7 @@
 
 ; For Röhrich-style error recovery
 
-(define (compute-sorted-lr-closure state grammar k first-map)
+(define (compute-sorted-lr-closure state grammar k)
 
   (define (initial-items symbol lookahead-suffix)
     (flatten
@@ -110,8 +110,8 @@
 	    (map
 	     (lambda (la)
 	       (make-item production 0 la))
-	     (sf-first lookahead-suffix k grammar first-map)))
-	  (productions-with-lhs symbol grammar))))
+	     (sequence-first lookahead-suffix k grammar)))
+	  (grammar-productions-with-lhs symbol grammar))))
 
   (define (item-next-predict item)
     (let ((rhs-rest (item-rhs-rest item)))
@@ -134,14 +134,13 @@
 
   (predict state))
 
-(define (compute-slr-closure state grammar k follow-map)
+(define (compute-slr-closure state grammar k)
 
     (define (initial-items symbol)
-      (add-slr-lookahead
-       (map (lambda (production)
-	      (make-item production 0 #f))
-	    (productions-with-lhs symbol grammar))
-       follow-map))
+      (add-slr-lookahead (map (lambda (production)
+				(make-item production 0 #f))
+			      (grammar-productions-with-lhs symbol grammar))
+			 k grammar))
 
     (define (next-predict item-set)
       (let loop ((item-set item-set) (predict-set item-set))
@@ -164,13 +163,13 @@
 	    predict-set
 	    (loop new-predict-set)))))
 
-(define (add-slr-lookahead item-set follow-map)
+(define (add-slr-lookahead item-set k grammar)
   (let ((add-one-slr-lookahead
 	 (lambda (item)
 	   (let ((production (item-production item)))
 	     (map (lambda (la)
 		    (make-item production (item-position item) la))
-		  (vector-ref follow-map (production-lhs production)))))))
+		  (nonterminal-follow (production-lhs production) k grammar))))))
     (flatten (map add-one-slr-lookahead item-set))))
 
 ; Operations on LR states

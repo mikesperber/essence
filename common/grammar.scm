@@ -16,7 +16,7 @@
    productions
    productions-by-lhs
    terminal-attribution)
-  ())
+  ((properties '())))
 
 (define (make-grammar nonterminals terminals
 		      error start
@@ -45,8 +45,18 @@
 	    (equal? lhs (production-lhs production)))
 	  productions))
 
+(define (grammar-fetch-property grammar name proc)
+  (cond
+   ((assoc name (grammar-properties grammar)) => cdr)
+   (else
+    (let ((value (proc grammar)))
+      (set-grammar-properties! grammar
+			       (cons (cons name value)
+				     (grammar-properties grammar)))
+      value))))
+
 (define (grammar-start-production grammar)
-  (car (grammar-productions grammar)))
+  (car (grammar-productions-with-lhs (grammar-start grammar) grammar)))
 
 (define (terminal? symbol grammar)
   (>= symbol (grammar-number-of-nonterminals grammar)))
@@ -54,7 +64,7 @@
 (define (nonterminal? symbol grammar)
   (< symbol (grammar-number-of-nonterminals grammar)))
 
-(define (productions-with-lhs lhs grammar)
+(define (grammar-productions-with-lhs lhs grammar)
   (vector-ref (grammar-productions-by-lhs grammar) lhs))
 
 ; Productions are specialized and show up in the specialized output.
@@ -109,7 +119,7 @@
 
 ; nullable computation
 
-(define (compute-nullable? grammar)
+(define (compute-nonterminal-nullable? grammar)
   
   (let ((visited-vector
 	 (make-vector (grammar-number-of-nonterminals grammar) #f))
@@ -121,7 +131,7 @@
 	  (vector-ref nullable-vector nonterminal)
 	  (begin
 	    (vector-set! visited-vector nonterminal #t)
-	    (let loop ((productions (productions-with-lhs nonterminal grammar)))
+	    (let loop ((productions (grammar-productions-with-lhs nonterminal grammar)))
 	      (if (null? productions)
 		  #f
 		  (let ((production (car productions)))
@@ -139,21 +149,29 @@
     (lambda (nonterminal)
       (vector-ref nullable-vector nonterminal))))
 
-(define (sequence-nullable? sequence grammar nullable?)
+(define (nonterminal-nullable? nonterminal grammar)
+  ((grammar-fetch-property grammar 'nonterminal-nullable?
+			   compute-nonterminal-nullable?)
+   nonterminal))
+
+(define (sequence-nullable? sequence grammar)
   (not (any? (lambda (symbol)
 	       (or (terminal? symbol grammar)
-		   (not (nullable? symbol))))
+		   (not (nonterminal-nullable? symbol grammar))))
 	     sequence)))
 
 ; First set computation
 
-(define (sf-first rhs k grammar first-map)
-  (let loop ((rhs-rest rhs))
+(define (really-nonterminal-first nonterminal first-map)
+  (vector-ref first-map nonterminal))
+
+(define (really-sequence-first sequence k grammar nonterminal-first)
+  (let loop ((sequence-rest sequence))
     
-    (if (null? rhs-rest)
+    (if (null? sequence-rest)
 	'(())
-	(let ((cdr-first (loop (cdr rhs-rest)))
-	      (s (car rhs-rest)))
+	(let ((cdr-first (loop (cdr sequence-rest)))
+	      (s (car sequence-rest)))
 	  (if (terminal? s grammar)
 	      (uniq
 	       (map (lambda (f)
@@ -165,15 +183,19 @@
 		  (map
 		   (lambda (f-car)
 		     (restricted-append k f-car f-cdr))
-		   (vector-ref first-map s)))
+		   (nonterminal-first s k grammar)))
 		cdr-first)))))))
 
 (define (lhs-next-first lhs k grammar old-first)
-  (let loop ((ps (productions-with-lhs lhs grammar))
+  (let loop ((ps (grammar-productions-with-lhs lhs grammar))
 	     (first '()))
     (if (null? ps)
 	first
-	(let ((rhs-first (sf-first (production-rhs (car ps)) k grammar old-first)))
+	(let ((rhs-first
+	       (really-sequence-first
+		(production-rhs (car ps)) k grammar
+		(lambda (nonterminal k grammar)
+		  (really-nonterminal-first nonterminal old-first)))))
 	  (loop (cdr ps)
 		(union first rhs-first))))))
 
@@ -205,15 +227,24 @@
       ;; fixpoint iteration
       (let loop ((first-map (initial-first-map grammar)))
 	(let ((new-first-map (next-first-map grammar k first-map)))
-	  (if (map-equal? first-map new-first-map)
-	      first-map
-	      (loop new-first-map))))))
+	  (if (not (map-equal? first-map new-first-map))
+	      (loop new-first-map)
+	      (lambda (nonterminal)
+		(really-nonterminal-first nonterminal first-map)))))))
+
+(define (nonterminal-first nonterminal k grammar)
+  ((grammar-fetch-property grammar (cons 'nonterminal-first k)
+			   (lambda (grammar)
+			     (compute-first grammar k)))
+   nonterminal))
+
+(define (sequence-first sequence k grammar)
+  (really-sequence-first sequence k grammar nonterminal-first))
 
 ; first_1 computation
 
 (define (compute-first-1 grammar)
-  (let ((nullable? (compute-nullable? grammar))
-	(first-map (make-vector (grammar-number-of-nonterminals grammar) '()))
+  (let ((first-map (make-vector (grammar-number-of-nonterminals grammar) '()))
 	(depths (make-vector (grammar-number-of-nonterminals grammar) 0)))
     
     (define (for-each-nonterminal f)
@@ -221,7 +252,7 @@
 
     ;; each Y with X -> \alpha Y \beta with \alpha nullable
     (define (initial-symbols lhs)
-      (let production-loop ((productions (productions-with-lhs lhs grammar))
+      (let production-loop ((productions (grammar-productions-with-lhs lhs grammar))
 			    (symbols '()))
 	(if (not (null? productions))
 	    (let loop ((rhs-rest (production-rhs (car productions)))
@@ -234,7 +265,7 @@
 				      symbols
 				      (cons symbol symbols))))
 		    (if (and (nonterminal? symbol grammar)
-			     (nullable? symbol))
+			     (nonterminal-nullable? symbol grammar))
 			(loop (cdr rhs-rest) symbols)
 			(production-loop (cdr productions) symbols)))
 		  (production-loop (cdr productions) symbols)))
@@ -269,7 +300,7 @@
 			      (cons symbol '())))
 		       (initial-symbols nonterminal))))
 	 (vector-set! first-map nonterminal
-		      (if (nullable? nonterminal)
+		      (if (nonterminal-nullable? nonterminal grammar)
 			  (cons '() initial)
 			  initial))))
      (grammar-nonterminals grammar))
@@ -279,7 +310,9 @@
 		       for-each-induction
 		       associate-depth! depth-association
 		       overwrite-first! merge-firsts!)
-    first-map))
+
+    (lambda (nonterminal)
+      (vector-ref first-map nonterminal))))
 
 ; Follow set computation
 
@@ -295,7 +328,7 @@
 ;;; by iterating over the right sides of all productions, updating the
 ;;; follow-set as appropriate
 
-(define (next-follow-map grammar k first-map last-follow-map)
+(define (next-follow-map grammar k last-follow-map)
   (let ((new-follow-map (copy-vector last-follow-map)))
     (let loop ((productions (grammar-productions grammar)))
       (if (not (null? productions))
@@ -306,7 +339,7 @@
 		  (let ((sym (car rhs-rest)))
 		    (if (terminal? sym grammar)
 			(rhs-loop (cdr rhs-rest))
-			(let* ((fi-rest (sf-first (cdr rhs-rest) k grammar first-map))
+			(let* ((fi-rest (sequence-first (cdr rhs-rest) k grammar))
 			       (fo-lhs (vector-ref new-follow-map lhs))
 			       (fo-sym (uniq
 					(pair-map (lambda (xs ys)
@@ -318,22 +351,22 @@
 			  (rhs-loop (cdr rhs-rest))))))))))
     new-follow-map))
 
-(define (compute-follow grammar k first-map)
+(define (compute-follow grammar k)
   (if (= 1 k)
-      (compute-follow-1 grammar first-map)
+      (compute-follow-1 grammar)
       ;; fixpoint iteration
       (let loop ((follow-map (initial-follow-map grammar)))
-	(let ((new-follow-map (next-follow-map grammar k first-map follow-map)))
-	  (if (map-equal? follow-map new-follow-map)
-	      follow-map
-	      (loop new-follow-map))))))
+	(let ((new-follow-map (next-follow-map grammar k follow-map)))
+	  (if (not (map-equal? follow-map new-follow-map))
+	      (loop new-follow-map)
+	      (lambda (nonterminal)
+		(vector-ref follow-map nonterminal)))))))
 
 ; follow_1 computation
 
-(define (compute-follow-1 grammar first-map)
+(define (compute-follow-1 grammar)
 
-  (let ((nullable? (compute-nullable? grammar))
-	(follow-map (make-vector (grammar-number-of-nonterminals grammar) '()))
+  (let ((follow-map (make-vector (grammar-number-of-nonterminals grammar) '()))
 	(depths (make-vector (grammar-number-of-nonterminals grammar) 0)))
 
     (define (for-each-nonterminal f)
@@ -346,9 +379,9 @@
 		     (cond
 		      ((last-memv nonterminal (production-rhs production))
 		       => (lambda (rhs-rest)
-			    (sequence-nullable? (cdr rhs-rest) grammar nullable?)))
+			    (sequence-nullable? (cdr rhs-rest) grammar)))
 		      (else #f)))
-		   (productions-with-lhs lhs grammar))
+		   (grammar-productions-with-lhs lhs grammar))
 	     (f lhs)))
        (grammar-nonterminals grammar)))
 
@@ -382,11 +415,11 @@
 		  (if (null? rhs-rest)
 		      (production-loop (cdr productions) follow)
 		      (let* ((first (delq '()
-					  (sf-first rhs-rest 1 grammar first-map)))
+					  (sequence-first rhs-rest 1 grammar)))
 			     (follow (union first follow)))
 			(cond 
 			 ((and (nonterminal? (car rhs-rest) grammar)
-			       (nullable? (car rhs-rest)))
+			       (nonterminal-nullable? (car rhs-rest) grammar))
 			  (rhs-loop (cdr rhs-rest) follow))
 			 ((memv nonterminal rhs-rest)
 			  => (lambda (rhs-rest)
@@ -406,7 +439,14 @@
 		       associate-depth! depth-association
 		       overwrite-follow! merge-follows!)
 
-    follow-map))
+    (lambda (nonterminal)
+      (vector-ref follow-map nonterminal))))
+
+(define (nonterminal-follow nonterminal k grammar)
+  ((grammar-fetch-property grammar (cons 'nonterminal-follow k)
+			   (lambda (grammar)
+			     (compute-follow grammar k)))
+   nonterminal))
 
 ; List utilities
 
