@@ -76,6 +76,60 @@
           (else
            (loop (cdr l) yes (cons (car l) no))))))
 
+;;; when items : [(prod, pos, [ch])]
+;;; then selection : [([ch]^rev, prod)]
+;;; a list of pairs of reversed lookahead string and production
+(defprim (items->selection items)
+  (sort-selection
+   (let loop ((items items))
+     (if (null? items)
+	 '()
+	 (cons
+	  (let ((item (car items)))
+	    (cons (reverse (item-lookahead item))
+		  (item-production item)))
+	  (loop (cdr items)))))))
+
+;;; a trie : [([[ch]], prod)]
+;;; a list of pairs of a lookahead string and a production
+;;; each position of a lookahead string is a set (list) of characters
+(defprim (selection->trie selection k)
+  (let ((process-body
+	 (lambda (la body)
+	   (if (> k 1)
+	       (cons (car body) (cons la (cdr body)))
+	       (cons la (cdr body)))))
+	(maybe-recurse
+	 (lambda (selection)
+	   (if (> k 1)
+	       (selection->trie selection (- k 1))
+	       selection))))
+    (if (null? selection)
+	'()
+	    (maybe-recurse
+	     (let ((select-1 (car selection)))
+	       (let loop ((la (list (caar select-1)))
+			  (body (cons (cdar select-1) (cdr select-1)))
+			  (selection (cdr selection)))
+		 (if (null? selection)
+		     (list (process-body la body))
+		     (let* ((select-2 (car selection))
+			    (la-2 (caar select-2))
+			    (body-2 (cons (cdar select-2) (cdr select-2))))
+		       (if (equal? body body-2)
+			   (loop (cons la-2 la) body (cdr selection))
+			   (cons (process-body la body)
+				 (loop (list la-2) body-2 (cdr selection))))))))))))
+
+(defprim (sort-selection selection)
+  (sort-generic
+   (lambda (x y)
+     (string<? (symbols->string (car x))
+	       (symbols->string (car y))))
+   selection))
+
+
+
 ; Grammars
 ; ========
 
@@ -181,22 +235,27 @@
      (and (equal? production (item-production item))
 	  (equal? position (item-position item))))
    items)))
-
-(defprim (insert-item item-set item)
-  (if (null? item-set)
-      (list item)
-      (if (item<? item (car item-set))
-	  (cons item item-set)
-	  (cons (car item-set)
-		(insert-item (cdr item-set) item)))))
 		  
 (defprim (sort-items item-set)
-  (let loop ((sorted '())
-	     (item-set item-set))
-    (if (null? item-set)
-	sorted
-	(loop (insert-item sorted (car item-set))
-	      (cdr item-set)))))
+  (sort-generic item<? item-set))
+
+(defprim (sort-generic leq? xs)
+  (letrec
+      ((insert
+	(lambda (x xs)
+	  (let loop ((xs xs))
+	    (if (null? xs)
+		(list x)
+		(let ((y (car xs)))
+		  (if (leq? x y)
+		      (cons x xs)
+		      (cons y (loop (cdr xs)))))))))
+       (sort
+	(lambda (xs)
+	  (if (null? xs)
+	      '()
+	      (insert (car xs) (sort (cdr xs)))))))
+    (sort xs)))
 
 (defprim (items-merge is-1 is-2)
   (cond ((null? is-1) is-2)
