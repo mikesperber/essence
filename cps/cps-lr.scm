@@ -10,7 +10,7 @@
 (define
   (cps-parse grammar k compute-closure state continuations input)
   (_memo
-   (let* ((closure (compute-closure state))
+   (let* ((closure (compute-closure state grammar k))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
      (define (shift symbol input)
@@ -59,9 +59,9 @@
      grammar
      k
      (if (equal? method 'lr)
-	 (lambda (state)
+	 (lambda (state grammar k)
 	   (compute-lr-closure state grammar k))
-	 (lambda (state)
+	 (lambda (state grammar k)
 	   (compute-slr-closure state grammar k)))
      (list (make-item start-production 0 '()))
      (c-nil)
