@@ -78,3 +78,10 @@
   (files (common the-trick)
 	 (common lookahead)
 	 (cps cps-lr)))
+
+(define-structure cps-lr-attrib parser-interface
+  (open scheme signals grammar lr-spectime access-stream
+	cogen-directives)
+  (files (common the-trick)
+	 (common lookahead)
+	 (cps cps-lr-attrib)))
