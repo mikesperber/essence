@@ -6,7 +6,7 @@
 
 (define (ds-parse grammar k compute-closure state input)
   (_memo
-   (let ((closure (compute-closure state)))
+   (let ((closure (compute-closure state grammar k)))
 
      (define (reduce)
        (cond
@@ -30,24 +30,27 @@
       (else (reduce))))))
 
 (define (ds-parse-bar grammar k compute-closure closure symbol input)
-  (call-with-values
-   (lambda ()
-     (ds-parse grammar k compute-closure
-	       (goto closure symbol) input))
-   (lambda (lhs dot input)
-     (cond
-      ((> dot 1)
-       (values lhs (- dot 1) input))
-      ((and (initial? closure grammar)
-	    (equal? (grammar-start grammar) lhs))
-       (if (stream-empty? input)
-	   'accept
-	   (error "parse error")))
-      (else
-       (ds-parse-bar grammar k compute-closure
-		     closure
-		     (the-member lhs (next-nonterminals closure grammar))
-		     input))))))
+  (let ((the-next-nonterminals (next-nonterminals closure grammar)))
+    (call-with-values
+     (lambda ()
+       (ds-parse grammar k compute-closure
+		 (goto closure symbol) input))
+     (lambda (lhs dot input)
+       (cond
+	((null? the-next-nonterminals)
+	 (values lhs (- dot 1) input))
+	((> dot 1)
+	 (values lhs (- dot 1) input))
+	((and (initial? closure grammar)
+	      (equal? (grammar-start grammar) lhs))
+	 (if (stream-empty? input)
+	     'accept
+	     (error "parse error")))
+	(else
+	 (ds-parse-bar grammar k compute-closure
+		       closure
+		       (the-member lhs the-next-nonterminals)
+		       input)))))))
 
 (define (parse grammar k method input)
   (let ((start-production (grammar-start-production grammar)))
@@ -55,9 +58,9 @@
     (ds-parse grammar
 	      k
 	      (if (equal? method 'lr)
-		  (lambda (state)
+		  (lambda (state grammar k)
 		    (compute-lr-closure state grammar k))
-		  (lambda (state)
+		  (lambda (state grammar k)
 		    (compute-slr-closure state grammar k)))
 	      (list (make-item start-production 0 '()))
 	      input)))
