@@ -6,18 +6,18 @@
   (c-nil))
 
 (define-without-memoization
-  (parse grammar k first-map state continuations input)
+  (parse grammar k compute-closure state continuations input)
   (_memo
    (if (final? state grammar)
        (if (equal? '$ (car input))
 	   'accept
 	   'error)
-       (let* ((closure (compute-closure state grammar k first-map))
+       (let* ((closure (compute-closure state grammar))
 	      (the-next-nonterminals (next-nonterminals closure grammar)))
 
 	 (define (shift symbol input)
 	   (let ((next-state (goto closure symbol)))
-	     (parse grammar k first-map
+	     (parse grammar k compute-closure
 		    next-state
 		    (c-cons (and (not (null? the-next-nonterminals))
 				 shift-nonterminal)
@@ -51,18 +51,33 @@
 
 ;; ~~~~~~~~~~~~
 
-(define (do-parse source-grammar k input)
+(define (do-parse source-grammar k method input)
   (let* ((grammar (source-grammar->grammar source-grammar k))
 	 (start-production
-	   (car (grammar-productions grammar))))
-    (parse grammar
-	   k
-	   (compute-first grammar k)
-	   (list (make-item start-production
-			    0
-			    (cdr (production-rhs start-production))))
-	   (c-nil)
-	   (append input (make-$ k)))))
+	   (car (grammar-productions grammar)))
+	 (first-map (compute-first grammar k)))
+
+    (cond
+     ((equal? method 'lr)
+      (parse grammar
+	     k
+	     (lambda (state grammar)
+	       (compute-lr-closure state grammar k first-map))
+	     (list (make-item start-production
+			      0
+			      (cdr (production-rhs start-production))))
+	     (c-nil)
+	     (append input (make-$ k))))
+     ((equal? method 'slr)
+      (let ((follow-map (compute-follow grammar k first-map)))
+	(parse grammar
+	       k
+	       (lambda (state grammar)
+		 (compute-slr-closure state grammar k follow-map))
+	       (add-slr-lookahead (list (make-item start-production 0 #f))
+				  follow-map)
+	       (c-nil)
+	       (append input (make-$ k))))))))
 
 ;; ~~~~~~~~~~~~
 
