@@ -1,5 +1,5 @@
-; Utilities
-; =========
+;; Utilities
+;; =========
 
 (defprim (_sim-display-immediate arg)
   (display arg))
@@ -8,8 +8,36 @@
 (defprim (_sim-newline-immediate)
   (newline))
 
-; ---
+;; ---
 
 (defconstr (mynil) (mycons mycar mycdr))
 
 (defprim-dynamic (generalize x) x)
+
+;; ---
+
+(defprim (sort-generic leq? xs)
+  (letrec
+      ((insert
+	(lambda (x xs)
+	  (let loop ((xs xs))
+	    (if (null? xs)
+		(list x)
+		(let ((y (car xs)))
+		  (if (leq? x y)
+		      (cons x xs)
+		      (cons y (loop (cdr xs)))))))))
+       (sort
+	(lambda (xs)
+	  (if (null? xs)
+	      '()
+	      (insert (car xs) (sort (cdr xs)))))))
+    (sort xs)))
+
+(defprim (uniq l)
+  (cond ((null? l) l)
+	((member (car l) (cdr l)) (uniq (cdr l)))
+	(else (cons (car l) (uniq (cdr l))))))
+
+(defprim (flatten l)
+  (apply append l))
