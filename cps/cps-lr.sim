@@ -10,19 +10,6 @@
 
 (define (generalize1 z)
   (if #t z (generalize z)))
-
-(define (eta-expand-3-d c)
-  (lambda (x y z)
-    (c x y z)))
-
-(define (eta-expand-3-s c)
-  (lambda (x y z)
-    (c x y z)))
-
-(define (collapse-3 c)
-  (eta-expand-3-s (generalize1 (eta-expand-3-d c))))
-
-; ---
  
 (define (filter-2 pred? list)
   (let loop ((rest list) (result '()))
@@ -91,7 +78,7 @@
 	     (let ((n-active (- (active next-state) 1)))
 	       (cps-parse grammar k first-map
 			  next-state
-			  (mycons (collapse-3 c0)
+			  (mycons (generalize1 c0)
 				  (my-take n-active continuations))
 			  (mycons attribute-value
 				  (my-take n-active attribute-values))
@@ -106,7 +93,7 @@
 			   (n-active (- (active next-state) 1)))
 		      (cps-parse grammar k first-map
 				 next-state
-				 (mycons (collapse-3 c0)
+				 (mycons (generalize1 c0)
 					 (my-take n-active continuations))
 				 (mycons attribute-value
 					 (my-take n-active attribute-values))
@@ -120,7 +107,7 @@
 		       (n-active (- (active next-state) 1)))
 		  (cps-parse grammar k first-map
 			     next-state
-			     (mycons (collapse-3 c0)
+			     (mycons (generalize1 c0)
 				     (my-take n-active continuations))
 			     (mycons attribute-value
 				     (my-take n-active attribute-values))
