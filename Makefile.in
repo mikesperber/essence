@@ -1,3 +1,6 @@
+# This is pathetically large for such a small package.
+# Go figure.
+
 SHELL = /bin/sh
 
 srcdir = @srcdir@
@@ -17,12 +20,16 @@ docdir = $(prefix)/doc
 mandir = $(prefix)/man/man$(manext)
 
 TEMPDIR = /tmp
+distdir = /tmp
 
 RUNNABLE = essence
+MINOR_VERSION_NUMBER = 0
 
-TAR = tar # must be GNU tar, probably
+TAR = tar
 ZCAT = zcat
+GZIP = gzip
 SCHEME48 = scheme48
+
 PGG_DIRECTORY = ../cps-mcogen
 PGG_PACKAGES = $(PGG_DIRECTORY)/genext-packages.scm \
 	$(PGG_DIRECTORY)/pgg-packages.scm
@@ -40,10 +47,11 @@ LOOKAHEAD_SOURCE = common/lookahead-trie.scm
 
 PARSER_BASE = $(PARSER_BASE_DIRECTORY)/$(PARSER_VARIANT)
 
+PARSER_SOURCE_FILES = \
+	$(PARSER_BASE).scm
+
 PARSER_GENEXT_SUPPORT_SOURCE_FILES = \
-	$(PARSER_BASE).scm \
 	common/the-trick.scm \
-	common/lookahead.scm \
 	$(LOOKAHEAD_SOURCE) \
 	common/pure.scm \
 	common/memo.scm
@@ -51,13 +59,14 @@ PARSER_GENEXT_SUPPORT_SOURCE_FILES = \
 PARSER_SUPPORT_SOURCE_FILES = \
 	common/stream.scm \
 	common/grammar.scm \
+	common/scc-union.scm \
+	common/cogen-directives.scm \
+	common/defdata.scm \
 	common/lr-spectime.scm
 
 BATCH_SUPPORT_SOURCE_FILES = \
 	common/command-line.scm \
 	common/main.scm
-
-PARSER_LIB_SOURCE_FILES = common/stream.scm
 
 PARSER_CONFIG_FILES = \
 	interfaces.scm \
@@ -68,7 +77,6 @@ PARSER_GENEXT_SOURCE_FILES = \
 
 PARSER_GENEXT_CONFIG_FILES = \
 	$(PARSER_CONFIG_FILES) \
-	$(GENEXT_PACKAGES) \
 	$(PARSER_BASE)-genext.config.scm \
 	generator-packages.scm
 
@@ -76,6 +84,45 @@ PARSER_SHARE_DIRECTORIES = \
 	common \
 	$(PARSER_BASE_DIRECTORY) \
 	$(GENEXT_DIRECTORY)
+
+# This does not include PARSER_SOURCE_FILES
+PARSER_ALL_SOURCE_FILES = \
+	$(PARSER_SUPPORT_SOURCE_FILES) \
+	$(PARSER_GENEXT_SOURCE_FILES) \
+	$(PARSER_GENEXT_CONFIG_FILES) \
+	$(BATCH_SUPPORT_SOURCE_FILES) \
+	$(GENEXT_DIRECTORY)/*
+
+PARSER_DOC_FILES = \
+	COPYING README INSTALL MANIFEST
+
+PARSER_EXAMPLE_FILES = \
+	examples/toy-grammars.scm \
+	examples/toy-inputs.scm
+
+PARSER_DS_FILES = \
+	direct/direct-lr-naive.scm \
+	direct/direct-lr-vanilla.scm \
+	direct/direct-lr-imperative.scm \
+	direct/direct-lr.scm
+
+PARSER_CPS_FILES = \
+	cps/cps-lr-naive.scm \
+	cps/cps-lr-vanilla.scm \
+	cps/cps-lr-attrib.scm \
+	cps/cps-lr-attrib.scm \
+	cps/cps-lr-attrib-error.scm \
+	cps/cps-lr.scm
+
+PARSER_DIST_FILES = \
+	$(PARSER_ALL_SOURCE_FILES) \
+	configure configure.in install-sh \
+	Makefile.in \
+	$(PARSER_DOC_FILES) \
+	$(PARSER_EXAMPLE_FILES) \
+	$(PARSER_DS_FILES) \
+	$(PARSER_CPS_FILES) \
+	$(PARSER_GENEXT_SUPPORT_SOURCE_FILES)
 
 IMAGE = essence.image
 
@@ -88,26 +135,11 @@ install: install-directories install-script install-share install-images
 install-images: install-image install-batch
 
 install-share:
-	for f in $(PARSER_LIB_SOURCE_FILES); do 			\
+	for f in $(PARSER_SOURCE_FILES); do 				\
 		$(INSTALL_DATA)  $$f $(sharedir)/$$f || exit 1;		\
 	done &&								\
-	for f in $(PARSER_SUPPORT_SOURCE_FILES); do 			\
-		$(INSTALL_DATA) $$f $(sharedir)/$$f || exit 1;		\
-	done &&								\
-	for f in $(PARSER_GENEXT_SUPPORT_SOURCE_FILES); do 		\
-		$(INSTALL_DATA) $$f $(sharedir)/$$f || exit 1;		\
-	done &&								\
-	for f in $(PARSER_GENEXT_SOURCE_FILES); do 			\
-		$(INSTALL_DATA) $$f $(sharedir)/$$f || exit 1;		\
-	done &&								\
-	for f in $(PARSER_GENEXT_CONFIG_FILES); do 			\
-		$(INSTALL_DATA) $$f $(sharedir)/$$f || exit 1;		\
-	done &&								\
-	for f in $(GENEXT_DIRECTORY)/*; do				\
-		$(INSTALL_DATA) $$f $(sharedir)/$$f || exit 1;		\
-	done &&								\
-	for f in $(BATCH_SUPPORT_SOURCE_FILES); do 			\
-		$(INSTALL_DATA) $$f $(sharedir)/$$f || exit 1;		\
+	for f in $(PARSER_ALL_SOURCE_FILES); do 			\
+		$(INSTALL_DATA)  $$f $(sharedir)/$$f || exit 1;		\
 	done
 
 install-script:
@@ -136,10 +168,26 @@ install-directories:
 	done &&								\
 	mkdir -p $(incdir)
 
+configure: configure.in
+	autoconf
+
+Makefile: Makefile.in config.status
+	./config.status
+
+config.status: configure
+	./configure
+
 clean:
 	rm -f $(BATCH_IMAGE) $(IMAGE)
+	rm -f $(RUNNABLE)
 
-pristine: clean
+distclean: clean
+	rm -f Makefile
+	rm -f config.status config.cache config.log
+
+pristine: distclean
+	rm -f configure
+	rm -f $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm
 	rm -rf $(GENEXT_DIRECTORY)
 
 batch: $(BATCH_IMAGE)
@@ -168,14 +216,15 @@ $(IMAGE): $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm \
 	$(PARSER_GENEXT_CONFIG_FILES)
 	(echo ',batch on';						\
 	 echo ",translate =essence/ `pwd`/";				\
-	 echo -n ',config ,load ';					\
-	 for config in $(PARSER_GENEXT_CONFIG_FILES); do		\
-		echo -n =essence/$$config;				\
+	 for config in $(GENEXT_PACKAGES); do				\
+		echo ",config ,load =essence/$$config";			\
 	 done;								\
-	 echo;								\
+	 for config in $(PARSER_GENEXT_CONFIG_FILES); do		\
+		echo ",config ,load =essence/$$config";			\
+	 done;								\
 	 echo ",load-package $(PARSER_VARIANT)";			\
 	 echo ",load-package $(PARSER_VARIANT)-generate";		\
-	 echo ",dump $(TEMPDIR/$(IMAGE)";				\
+	 echo ",dump $(IMAGE)";						\
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(GENEXT_HEAPSIZE)
 
@@ -184,6 +233,9 @@ install-image: genext \
 	rm -f $(TEMPDIR)/$(IMAGE) &&					\
 	(echo ',batch on';						\
 	 echo ",translate =essence/ `pwd`/";				\
+	 for config in $(GENEXT_PACKAGES); do				\
+		echo ",config ,load =essence/$$config";			\
+	 done;								\
 	 for config in $(PARSER_GENEXT_CONFIG_FILES); do		\
 		echo ",config ,load =essence/$$config";			\
 	 done;								\
@@ -199,6 +251,7 @@ install-image: genext \
 genext: $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm
 
 $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm: \
+	$(PARSER_SOURCE_FILES) \
 	$(PARSER_GENEXT_SUPPORT_SOURCE_FILES) \
 	$(PARSER_SUPPORT_SOURCE_FILES)
 	(echo ",config ,load $(PGG_PACKAGES)";	\
@@ -222,9 +275,32 @@ $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm: \
 	) | $(SCHEME48) -h $(PGG_HEAPSIZE)
 
 import-genext:
-	rm -rf $(GENEXT_DIRECTORY) &&					\
+	rm -rf $(GENEXT_DIRECTORY)
 	cd $(PGG_DIRECTORY) &&						\
-	$(MAKE) $(GENEXT_BASE)-$(GENEXT_VERSION).tar.gz &&		\
+	$(MAKE) $(GENEXT_BASE)-$(GENEXT_VERSION).tar.gz
 	mkdir $(GENEXT_DIRECTORY) &&					\
-	$(ZCAT) $(PGG_DIRECTORY)/$(GENEXT_BASE)-$(GENEXT_VERSION).tar.gz	\
+	$(ZCAT) $(PGG_DIRECTORY)/$(GENEXT_BASE)-$(GENEXT_VERSION).tar.gz\
 	| (cd $(GENEXT_DIRECTORY); $(TAR) xvf -)
+
+distname = $(RUNNABLE)-1.$(MINOR_VERSION_NUMBER)
+
+dist: import-genext \
+	configure Makefile \
+	$(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm
+	distname=$(distname) &&						\
+	distfile=$(distdir)/$$distname.tar.gz &&			\
+	if [ -d $(distdir) ] &&						\
+	   [ -w $$distfile -o -w $(distdir) ]; then			\
+		rm -f $$distname &&					\
+		ln -s . $$distname &&					\
+		files='' &&						\
+		for i in $(PARSER_DIST_FILES); do			\
+			files="$$files $$distname/$$i";			\
+		done &&							\
+	        tar cf - $$files | $(GZIP) --best >$$distfile &&	\
+		rm $$distname;						\
+	else								\
+		echo "Can't write $$distfile" >&2;			\
+		exit 1;							\
+	fi
+
