@@ -6,7 +6,9 @@
 (define-syntax define-memo
   (syntax-rules ()
     ((define-memo name level)
-     (define (name x) x))))
+     (define-syntax name
+       (syntax-rules ()
+	 ((name x) x))))))
 
 (define-syntax define-primitive
   (syntax-rules ()
