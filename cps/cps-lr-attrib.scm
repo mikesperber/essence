@@ -13,7 +13,7 @@
 	     continuations attribute-values
 	     input)
   (_memo
-   (let* ((closure (compute-closure state grammar))
+   (let* ((closure (compute-closure state))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
      (define (shift symbol attribute-value input)
@@ -35,7 +35,8 @@
 	  (the-member nonterminal the-next-nonterminals)
 	  attribute-value
 	  input))
-	(else attribute-value)))
+	((stream-empty? input) attribute-value)
+	(else (error "parse error"))))
 
      (define (reduce)
        (cond
@@ -75,10 +76,10 @@
      grammar
      k
      (if (equal? method 'lr)
-	 (lambda (state grammar)
+	 (lambda (state)
 	   (compute-lr-closure state grammar k first-map))
 	 (let ((follow-map (compute-follow grammar k first-map)))
-	   (lambda (state grammar)
+	   (lambda (state)
 	     (compute-slr-closure state grammar k follow-map))))
      (list (make-item start-production 0 '()))
      (c-nil)
