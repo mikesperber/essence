@@ -38,7 +38,7 @@
     (open scheme options
 	  generate-structures
 	  grammar-scratch-package
-	  i/o big-util formats handle conditions pp)
+	  i/o os-strings big-util formats exceptions conditions pp)
     (files (common main)))
   
   generator-structures)
