@@ -25,7 +25,7 @@ TEMPDIR = /tmp
 distdir = /tmp
 
 RUNNABLE = essence
-MINOR_VERSION_NUMBER = 1
+MINOR_VERSION_NUMBER = 2
 
 TAR = tar
 ZCAT = zcat

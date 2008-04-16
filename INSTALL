@@ -2,8 +2,7 @@ Installation instructions for Essence
 ======================================
 
 For building and running Essence, you need an installed version of
-Scheme 48, version 0.51 or higher.  Essence has been tested with 0.51
-thru 0.53.
+Scheme 48, version 1.8 or higher.
 
 Before installation, run ./configure in the Essence toplevel
 directory.  This shell script attempts to guess correct values for
@@ -53,5 +52,5 @@ For other targets and options, consult Makefile.in.
 
 Enjoy!
 
-Mike Sperber <sperber@informatik.uni-tuebingen.de>
+Mike Sperber <sperber@deinprogramm.de>
 Peter Thiemann <thiemann@informatik.uni-freiburg.de>

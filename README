@@ -1,7 +1,7 @@
 Copyright (c) 1999 Michael Sperber and Peter Thiemann.
 See file COPYING.
 
-This is Essence 1.0!
+This is Essence 1.2!
 ====================
 
 Welcome to Essence, a Generator for LR(k) and SLR(k) parsers in
@@ -19,8 +19,7 @@ following paper:
 
 Michael Sperber and Peter Thiemann.
 Generation of LR parsers by partial evaluation.
-ACM Transactions on Programming Languages and Systems, 1999.
-To appear.
+ACM Transactions on Programming Languages and Systems, 22(2):224-264, March 2000.
 
 The Essence home page is at:
 
@@ -33,5 +32,5 @@ http://www.informatik.uni-freiburg.de/proglang/software/pgg/
 
 Enjoy!
 
-Mike Sperber <sperber@informatik.uni-tuebingen.de>
+Mike Sperber <sperber@deinprogramm.de>
 Peter Thiemann <thiemann@informatik.uni-freiburg.de>
