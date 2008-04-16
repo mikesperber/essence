@@ -1,0 +1,13 @@
+syntax: regexp
+~$
+^aclocal\.m4$
+^autom4te\.cache
+^config\.status$
+^config\.log$
+^configure$
+^Makefile$
+^genext
+^essence$
+^essence.*\.image$
+^doc/.*\.(aux|dvi|hlog|idx|ind|log|ilg|eval4tex|out|toc|bbl|blg|ps)$
+^doc/html
