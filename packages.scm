@@ -12,7 +12,7 @@
   (files (common stream)))
 
 (define-structure grammar grammar-interface
-  (open scheme big-util defrecord enumerated scc-union)
+  (open scheme big-util define-record-types enumerated scc-union)
   (files (common grammar)))
 
 (define-structure scc-union scc-union-interface
