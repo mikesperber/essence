@@ -1,0 +1,7 @@
+(config)
+(load "genext/genext-packages.scm")
+(load "interfaces.scm")
+(load "packages.scm")
+(load "cps/cps-lr-genext.config.scm")
+(load "generator-packages.scm")
+(exec)
