@@ -67,14 +67,14 @@
 
 (define-grammar g14 g14-symbol
   (S E C A OL AL ON AN)
-  (c comma colon lcurly rcurly lbracket rbracket)
+  (const comma colon lcurly rcurly lbracket rbracket)
   S
   (((S E) $1)
-   ((E c) $1)
+   ((E const) $1)
    ((E lcurly OL rcurly) $1)
-   ((E lbracket AL rcurly) $1)
+   ((E lbracket AL rbracket) $1)
    ((C comma) $1)
-   ((A c colon E) $1)
+   ((A const colon E) $1)
    ((OL) $1)
    ((OL ON) $1)
    ((ON A) $1)

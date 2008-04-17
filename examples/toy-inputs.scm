@@ -68,6 +68,6 @@
 		     (cons (enum g10-error-symbol *) #f)
 		     (cons (enum g10-error-symbol n) 7)))
 
-(define i14 (list (cons (enum g14-symbol lbracket) #f)
-		  (cons (enum g14-symbol c) #f)
-		  (cons (enum g14-symbol rbracket) #f)))
+(define i14-1 (list (cons (enum g14-symbol lbracket) #f)
+		    (cons (enum g14-symbol const) #f)
+		    (cons (enum g14-symbol rbracket) #f)))
