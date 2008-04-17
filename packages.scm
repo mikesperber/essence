@@ -50,6 +50,7 @@
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
+	 (common memo)
 	 (direct direct-lr)))
 
 (define-structure cps-lr-naive parser-interface
