@@ -38,7 +38,7 @@
 	      (shift-nonterminal shift-nonterminal))
 	  (if (and (initial? state grammar)
 		   (equal? (grammar-start grammar) nonterminal))
-	      (if (stream-empty? *input*)
+	      (if (null? *input*)
 		  *attribute-value*
 		  (handle-error))
 	      (shift
@@ -68,9 +68,9 @@
 	  (set! *input*
 		(cond
 		 ((zero? *error-status*) *input*)
-		 ((stream-empty? *input*)
+		 ((null? *input*)
 		  (error "parse error: premature end of input"))
-		 (else (stream-cdr *input*)))))
+		 (else (cdr *input*)))))
 
 	 (let loop ()
 
@@ -88,18 +88,18 @@
 
 	   (_memo
 	    (cond
-	     ((stream-empty? *input*)
+	     ((null? *input*)
 	      (cond
 	       ((find-eoi-lookahead-item next-accept-items) => reduce-recover)
 	       (else (error "parse error: premature end of input"))))
-	     ((maybe-the-member (car (stream-car *input*))
+	     ((maybe-the-member (car (car *input*))
 				(next-terminals next-closure grammar))
 	      => (lambda (symbol)
-		   (recover (cdr (stream-car *input*)))))
+		   (recover (cdr (car *input*)))))
 	     ((find-lookahead-item next-accept-items k *input*)
 	      => reduce-recover)
 	     (else
-	      (set! *input* (stream-cdr *input*))
+	      (set! *input* (cdr *input*))
 	      (loop)))))))
 
      ;; normal operation
@@ -129,17 +129,17 @@
 	    (and (not (null? the-next-nonterminals))
 		 shift-nonterminal)))
        (cond
-	((stream-empty? *input*)
+	((null? *input*)
 	 (cond
 	  ((find-eoi-lookahead-item accept-items) => reduce)
 	  (else (handle-error))))
-	((maybe-the-member (car (stream-car *input*))
+	((maybe-the-member (car (car *input*))
 			   (next-terminals closure grammar))
 	 => (lambda (symbol)
 	      (_memo
 	       (begin
-		 (set! *attribute-value* (cdr (stream-car *input*)))
-		 (set! *input* (stream-cdr *input*))
+		 (set! *attribute-value* (cdr (car *input*)))
+		 (set! *input* (cdr *input*))
 		 (set! *error-status*
 		       (if (zero? *error-status*)
 			   *error-status*

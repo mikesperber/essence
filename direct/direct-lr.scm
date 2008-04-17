@@ -24,14 +24,14 @@
 	       rhs-length))))
 
      (cond
-      ((stream-empty? *input*)
+      ((null? *input*)
        (cond
 	((find-eoi-lookahead-item accept-items) => reduce)
 	(else (error "parse error: unexpected EOI"))))
-      ((maybe-the-member (car (stream-car *input*))
+      ((maybe-the-member (car (car *input*))
 			 (next-terminals closure grammar))
        => (lambda (symbol)
-	    (set! *input* (stream-cdr *input*))
+	    (set! *input* (cdr *input*))
 	    (ds-parse-bar grammar k compute-closure closure
 			  symbol)))
       ((find-lookahead-item accept-items k *input*) => reduce)
@@ -50,7 +50,7 @@
        (- dot 1))
       ((and (initial? closure grammar)
 	    (eqv? (grammar-start grammar) *lhs*))
-       (if (stream-empty? *input*)
+       (if (null? *input*)
 	   'accept
 	   (error "parse error")))
       (else

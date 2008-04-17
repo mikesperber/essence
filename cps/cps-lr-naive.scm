@@ -15,14 +15,14 @@
 			 (take (- (active (goto closure symbol)) 1)
 			       continuations))
 		   input))
-       ((stream-empty? input) 'accept)
+       ((null? input) 'accept)
        (else 'error)))
 
     (cond
-     ((and (not (stream-empty? input))
-	   (member (car (stream-car input))
+     ((and (not (null? input))
+	   (member (car (car input))
 		   (next-terminals closure grammar)))
-      (c0 (car (stream-car input)) (stream-cdr input)))
+      (c0 (car (car input)) (cdr input)))
      ((find-lookahead-item (accept closure) k input)
       => (lambda (item)
 	   ((list-ref (cons c0 continuations)

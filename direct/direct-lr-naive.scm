@@ -4,11 +4,11 @@
 (define (ds-parse grammar k compute-closure state input)
   (let ((closure (compute-closure state grammar k)))
     (cond
-     ((and (not (stream-empty? input))
-	   (member (car (stream-car input))
+     ((and (not (null? input))
+	   (member (car (car input))
 		   (next-terminals closure grammar)))
       (ds-parse-bar grammar k compute-closure closure
-		    (car (stream-car input)) (stream-cdr input)))
+		    (car (car input)) (cdr input)))
      ((find-lookahead-item (accept closure) k input)
       => (lambda (item)
 	   (let ((rhs-length (length (item-rhs item)))
@@ -31,7 +31,7 @@
 	 (values lhs (- dot 1) input))
 	((and (initial? state grammar)
 	      (equal? (grammar-start grammar) lhs))
-	 (if (stream-empty? input)
+	 (if (null? input)
 	     'accept
 	     (error "parse error")))
 	(else

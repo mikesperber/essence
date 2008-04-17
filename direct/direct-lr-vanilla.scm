@@ -21,12 +21,12 @@
 	(else (error "parse error"))))
 
      (cond
-      ((stream-empty? input) (reduce))
-      ((maybe-the-member (car (stream-car input))
+      ((null? input) (reduce))
+      ((maybe-the-member (car (car input))
 			 (next-terminals closure grammar))
        => (lambda (symbol)
 	    (ds-parse-bar grammar k compute-closure closure
-			  symbol (stream-cdr input))))
+			  symbol (cdr input))))
       (else (reduce))))))
 
 (define-without-memoization
@@ -45,7 +45,7 @@
 	  (values lhs (- dot 1) input))
 	 ((and (initial? closure grammar)
 	       (equal? (grammar-start grammar) lhs))
-	  (if (stream-empty? input)
+	  (if (null? input)
 	      'accept
 	      (error "parse error")))
 	 (else

@@ -36,7 +36,7 @@
 			       handle-error)))
 	 (if (and (initial? state grammar)
 		  (equal? (grammar-start grammar) nonterminal))
-	     (if (stream-empty? input)
+	     (if (null? input)
 		 attribute-value
 		 (handle-error error-status input))
 	     (shift
@@ -55,9 +55,9 @@
 	      (input
 	       (cond
 		((zero? error-status) input)
-		((stream-empty? input)
+		((null? input)
 		 (error "parse error: premature end of input"))
-		(else (stream-cdr input)))))
+		(else (cdr input)))))
 
 	 (define (recover attribute-value input)
 	   (cps-parse grammar k compute-closure
@@ -88,17 +88,17 @@
 
 	   (_memo
 	    (cond
-	     ((stream-empty? input)
+	     ((null? input)
 	      (cond
 	       ((find-eoi-lookahead-item next-accept-items) => reduce-recover)
 	       (else (error "parse error: premature end of input"))))
-	     ((maybe-the-member (car (stream-car input))
+	     ((maybe-the-member (car (car input))
 				(next-terminals next-closure grammar))
 	      => (lambda (symbol)
-		   (recover (cdr (stream-car input)) input)))
+		   (recover (cdr (car input)) input)))
 	     ((find-lookahead-item next-accept-items k input)
 	      => reduce-recover)
-	     (else (loop (stream-cdr input))))))))
+	     (else (loop (cdr input))))))))
 
      ;; normal operation
      (define (reduce item)
@@ -124,20 +124,20 @@
 			     handle-error-here
 			     handle-error)))
        (cond
-	((stream-empty? input)
+	((null? input)
 	 (cond
 	  ((find-eoi-lookahead-item accept-items) => reduce)
 	  (else (handle-error error-status input))))
-	((maybe-the-member (car (stream-car input))
+	((maybe-the-member (car (car input))
 			   (next-terminals closure grammar))
 	 => (lambda (symbol)
-	      (shift symbol (cdr (stream-car input))
+	      (shift symbol (cdr (car input))
 		     handle-error
 		     (_memo
 		      (if (zero? error-status)
 			  error-status
 			  (- error-status 1)))
-		     (stream-cdr input))))
+		     (cdr input))))
 	((find-lookahead-item accept-items k input) => reduce)
 	(else (handle-error error-status input)))))))
 

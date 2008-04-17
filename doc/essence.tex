@@ -303,12 +303,11 @@ one binding called \codefont{parse}:
 \item \var{Method} is a symbol, either \codefont{lr} or
   \codefont{slr}, specifying the parsing method used---either full LR
   parsing or SLR parsing.
-\item \var{Input} is a \link{stream}{sec:streams} (as per the
-  \codefont{stream} structure) consisting of enumerands of the
-  terminals of \var{grammar} paired with their attribute values.  It is the
-  actual input to the parser. 
+\item \var{Input} is a list of pairs; each pair consists of an enumerand of the
+  terminals of \var{grammar} and the corresponding attribute value.  It is the
+  input to the parser. 
   
-  The stream actually contains the \emph{ordinal numbers} of the enumerated
+  The enumerands are the \emph{ordinal numbers} of the enumerated
   values.  These are easiest obtained via the \codefont{enumerated} structure
   of Scheme~48.  In the absence of an implementation of \codefont{grammar} and
   \codefont{enumerated}, the \link{list of components}[ in the previous
@@ -338,9 +337,8 @@ a grammar, lookahead, and parsing method.  Essence offers a (Unix)
 batch version of the parser generator, as well as a Scheme~48 package
 which allows access from within a REPL.
 
-In order to run, specialized parsers require an implementation of
-\link{streams}[ (see Sec.~\ref{sec:streams})]{sec:streams} as well as
-an \codefont{error} procedure which accepts one argument, an error
+In order to run, specialized parsers require an \codefont{error}
+procedure which accepts one argument, an error
 message.  The specialized parser will call \codefont{error} when an
 unrecoverable error occurs.
 
@@ -368,7 +366,7 @@ essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
   writes the specialized parser.
 \item \texttt{Goal-proc} is the name of entry procedure into the
   specialized parser.  It will accept just one argument, an input
-  stream.  The default is \texttt{parse}.
+  list.  The default is \texttt{parse}.
 \item \texttt{Method} is the parsing method, either \texttt{slr} or
   \texttt{lr}.  The default is \texttt{slr}.
 \item \texttt{Lookahead} is the lookahead size, a non-negative
@@ -390,70 +388,6 @@ which names the entry procedure into the parser.
 \ide{Generate-parser} generates a list of S-expressions which, when
 written out sequentially, represent the code of the specialized
 parser.
-
-\section{Implementing Input Streams}
-\label{sec:streams}
-
-Essence parsers rely on \textit{streams} to implement sequences of
-input terminals.  The parsers only use three accessor procedures which 
-may be implemented in any number of ways.  (One possible
-implementation is to just use lists.)  Essence comes with an
-implementation of lazy streams as well which includes stream creation
-procedures as well.
-
-\paragraph{Streams interface}
-\label{sec:streams-accessors}
-
-The part of the streams interface relevant to Essence parsers contains 
-only accessors:
-
-\proto{stream-car}{stream}{procedure}
-%
-\ide{Stream-car} returns the first element of a non-empty stream.
-
-\proto{stream-cdr}{stream}{procedure}
-%
-\ide{Stream-cdr}, when applied to a non-empty stream \var{stream},
-returns a new stream with the same elements as \var{stream} sans the
-first one.
-
-\proto{stream-empty?}{stream}{procedure}
-%
-\ide{Stream-empty?} returns \codefont{\#t} when applied to an empty
-stream, and \codefont{\#t} when applied to a non-emtpy stream.
-
-\paragraph{The \codefont{stream} structure}
-A portable example implementation of (lazy) streams is in the Essence
-distribution as \filename{common/stream.scm}.  It is also the
-implementation of the Scheme~48 structure \codefont{stream} defined in
-\filename{packages.scm}.  Aside from the accessors described
-\link{above}{sec:streams-accessors}, it also provides a creation
-procedure and procedure for converting to and from lists:
-
-\proto{make-stream}{state-transformer state}{procedure}
-%
-\ide{Make-stream} creates a stream with initial stream state
-\var{state} and state transformer \var{state-transformer}.  A stream
-state represents a state in unrolling the stream---as such it encodes
-the ability to produce the elements of the stream.
-\var{State-transformer} must accept a state as an argument and return
-a pair consisting of the first element of the stream as
-\codefont{car}, and a new state as \codefont{cdr}.
-
-The accessor procedures only ever call \var{state-transformer} in a
-single-threaded manner---they will apply it to \var{state} upon
-access, and they will apply it only once.  After that, they will apply 
-it once to the state returned by \var{state-transformer}, and so on.
-
-\proto{list->stream}{list}{procedure}
-%
-\ide{List->stream} produces a stream with exactly the elements of
-\var{list}.
-
-\proto{stream->list}{stream}{procedure}
-%
-\ide{Stream->list} produces a list with exactly the elements of
-\var{stream}.  \var{Stream} must be finite.
 
 \section{Error Recovery}
 \label{sec:error-recovery}
@@ -535,12 +469,6 @@ Loading the corresponding inputs requires enumerated values, hence
 \end{verbatim}
 defines the example inputs.
 
-As indicated in Sec.~\ref{sec:streams}, the input to the parser comes in form
-of a stream. To open the stream module type
-\begin{verbatim}
-> ,open stream
-\end{verbatim}
-
 Open the parser module by typing
 \begin{verbatim}
 > ,open cps-lr
@@ -552,7 +480,7 @@ As a sample run, consider the grammar \codefont{g10} which specifies arithmetic
 expressions. The terminals \codefont{l} and \codefont{r} stand for opening
 and closing brackets, whereas \codefont{n} stands for a number.
 \begin{verbatim}
-> (parse g10 1 'lr (list->stream i10-1))
+> (parse g10 1 'lr i10-1)
 147
 \end{verbatim}
 

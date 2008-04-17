@@ -3,10 +3,10 @@
   (let loop ((k k) (lookahead lookahead) (input input))
     (cond
      ((zero? k) #t)
-     ((null? lookahead) (stream-empty? input))
-     ((stream-empty? input) #f)
-     ((equal? (car lookahead) (car (stream-car input)))
-      (loop (- k 1) (cdr lookahead) (stream-cdr input)))
+     ((null? lookahead) (null? input))
+     ((null? input) #f)
+     ((equal? (car lookahead) (car (car input)))
+      (loop (- k 1) (cdr lookahead) (cdr input)))
      (else #f))))
 
 (define-without-memoization

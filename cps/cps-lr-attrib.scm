@@ -30,7 +30,7 @@
      (define (shift-nonterminal nonterminal attribute-value input)
        (if (and (initial? state grammar)
 		(equal? (grammar-start grammar) nonterminal))
-	   (if (stream-empty? input)
+	   (if (null? input)
 	       attribute-value
 	       (error "parse error"))
 	   (shift
@@ -57,14 +57,14 @@
 	  input)))
 
      (cond
-      ((stream-empty? input)
+      ((null? input)
        (cond
 	((find-eoi-lookahead-item accept-items) => reduce)
 	(else (error "parse error"))))
-      ((maybe-the-member (car (stream-car input))
+      ((maybe-the-member (car (car input))
 			 (next-terminals closure grammar))
        => (lambda (symbol)
-	    (shift symbol (cdr (stream-car input)) (stream-cdr input))))
+	    (shift symbol (cdr (car input)) (cdr input))))
       ((find-lookahead-item accept-items k input) => reduce)
       (else (error "parse error"))))))
 

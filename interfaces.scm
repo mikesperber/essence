@@ -5,11 +5,6 @@
 	   :syntax)
 	  (define-data :syntax)))
 
-(define-interface stream-interface
-  (export make-stream
-	  stream-car stream-cdr stream-empty?
-	  list->stream stream->list))
-
 (define-interface options-interface (export get-options))
 
 (define-interface main-interface (export main))

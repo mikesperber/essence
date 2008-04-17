@@ -62,7 +62,6 @@ PARSER_GENEXT_SUPPORT_SOURCE_FILES = \
 	common/memo.scm
 
 PARSER_SUPPORT_SOURCE_FILES = \
-	common/stream.scm \
 	common/grammar.scm \
 	common/scc-union.scm \
 	common/cogen-directives.scm \
@@ -295,7 +294,7 @@ $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm: \
 		  \"common/memo.scm\")					\
 	          '(parse 0 0 0 1)					\
 	          '(goal compute-parser)				\
-	          '(open signals stream					\
+	          '(open signals					\
 		         grammar lr-spectime)				\
 	          \"$(PARSER_BASE)-genext.scm\")			\
 	         #t)";							\
