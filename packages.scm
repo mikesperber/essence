@@ -91,4 +91,23 @@
 	 (common memo)
 	 (cps cps-lr)))
 
+(define-module (make-parser-tests parser)
+  (define-structure tests (export toy-grammar-tests)
+    (open scheme
+	  enumerated
+	  test-suites
+	  grammar
+	  stream
+	  parser)
+    (files (examples toy-grammar-test)
+	   (examples toy-grammars)
+	   (examples toy-inputs)))
+  tests)
+
+(def cps-lr-tests (make-parser-tests cps-lr))
+
+	
+
+
+
 
