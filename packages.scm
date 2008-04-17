@@ -3,84 +3,84 @@
   (files (common cogen-directives)
 	 (common defdata)))
 
-(define-structure options options-interface
+(define-structure essence-options essence-options-interface
   (open scheme big-util)
   (files (common command-line)))
 
-(define-structure grammar grammar-interface
-  (open scheme big-util define-record-types enumerated scc-union)
+(define-structure essence-grammars essence-grammars-interface
+  (open scheme big-util define-record-types enumerated essence-scc-unions)
   (files (common grammar)))
 
-(define-structure scc-union scc-union-interface
+(define-structure essence-scc-unions essence-scc-unions-interface
   (open scheme)
   (files (common scc-union)))
 
-(define-structure lr-spectime lr-spectime-interface
-  (open scheme big-util sort grammar)
+(define-structure essence-lr-spectime essence-lr-spectime-interface
+  (open scheme big-util sort essence-grammars)
   (files (common lr-spectime)))
 
-(define-structure ds-lr-naive parser-interface
-  (open scheme signals grammar lr-spectime
+(define-structure essence-ds-lr-naive essence-parser-interface
+  (open scheme signals essence-grammars essence-lr-spectime
 	cogen-directives) ; DEFINE-WITHOUT-MEMOIZATION
   (files (common lookahead)
 	 (direct direct-lr-naive)))
 
-(define-structure ds-lr-vanilla parser-interface
-  (open scheme signals grammar lr-spectime
+(define-structure essence-ds-lr-vanilla essence-parser-interface
+  (open scheme signals essence-grammars essence-lr-spectime
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
 	 (common memo)
 	 (direct direct-lr-vanilla)))
 
-(define-structure ds-lr-imperative parser-interface
-  (open scheme signals grammar lr-spectime
+(define-structure essence-ds-lr-imperative essence-parser-interface
+  (open scheme signals essence-grammars essence-lr-spectime
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
 	 (common memo)
 	 (direct direct-lr-imperative)))
 
-(define-structure ds-lr parser-interface
-  (open scheme signals grammar lr-spectime
+(define-structure essence-ds-lr essence-parser-interface
+  (open scheme signals essence-grammars essence-lr-spectime
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
 	 (common memo)
 	 (direct direct-lr)))
 
-(define-structure cps-lr-naive parser-interface
-  (open scheme signals grammar lr-spectime
+(define-structure essence-cps-lr-naive essence-parser-interface
+  (open scheme signals essence-grammars essence-lr-spectime
 	cogen-directives)
   (files (common lookahead)
 	 (cps cps-lr-naive)))
 
-(define-structure cps-lr-vanilla parser-interface
-  (open scheme signals grammar lr-spectime
+(define-structure essence-cps-lr-vanilla essence-parser-interface
+  (open scheme signals essence-grammars essence-lr-spectime
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
 	 (common memo)
 	 (cps cps-lr-vanilla)))
 
-(define-structure cps-lr-attrib parser-interface
-  (open scheme signals grammar lr-spectime
+(define-structure essence-cps-lr-attrib essence-parser-interface
+  (open scheme signals essence-grammars essence-lr-spectime
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
 	 (common memo)
 	 (cps cps-lr-attrib)))
 
-(define-structure cps-lr-attrib-error parser-interface
-  (open scheme signals grammar lr-spectime
+(define-structure essence-cps-lr-attrib-error essence-parser-interface
+  (open scheme signals essence-grammars essence-lr-spectime
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead)
 	 (common memo)
 	 (cps cps-lr-attrib-error)))
 
-(define-structure cps-lr parser-interface
-  (open scheme signals grammar lr-spectime
+(define-structure essence-cps-lr essence-parser-interface
+  (open scheme signals essence-grammars essence-lr-spectime
 	cogen-directives)
   (files (common the-trick)
 	 (common lookahead-trie)
@@ -88,21 +88,15 @@
 	 (cps cps-lr)))
 
 (define-module (make-parser-tests parser)
-  (define-structure tests (export toy-grammar-tests)
+  (define-structure tests (export toy-grammars-tests)
     (open scheme
 	  enumerated
 	  test-suites
-	  grammar
+	  essence-grammars
 	  parser)
-    (files (examples toy-grammar-test)
+    (files (examples toy-grammars-test)
 	   (examples toy-grammars)
 	   (examples toy-inputs)))
   tests)
 
-(def cps-lr-tests (make-parser-tests cps-lr))
-
-	
-
-
-
-
+(def essence-cps-lr-tests (make-parser-tests essence-cps-lr))

@@ -2,7 +2,7 @@
 
 (define-module (make-parser-generate genext-structures)
 
-  (define-structure generate-structures parser-generate-interface
+  (define-structure generate-structures essence-parser-generate-interface
     (open scheme
 	  genext-structures pgg-specialize
 	  cogen-gensym cogen-globals
@@ -23,24 +23,25 @@
 
   generate-structures)
 
-(def cps-lr-generate (make-parser-generate cps-lr-genext))
+(def essence-cps-lr-generate (make-parser-generate essence-cps-lr-genext))
 
 ;; Batch version
 
-(define-structure grammar-scratch-package (export *grammar-scratch-package*)
-  (open scheme grammar)
+(define-structure essence-grammar-scratch-package (export *grammar-scratch-package*)
+  (open scheme essence-grammars)
   (begin
     (define *grammar-scratch-package* (interaction-environment))))
 
 (define-module (make-parser-generator generate-structures)
 
-  (define-structure generator-structures main-interface
-    (open scheme options
+  (define-structure generator-structures essence-main-interface
+    (open scheme
+	  essence-options
 	  generate-structures
-	  grammar-scratch-package
+	  essence-grammar-scratch-package
 	  i/o os-strings big-util formats exceptions conditions pp)
     (files (common main)))
   
   generator-structures)
 
-(def cps-lr-parser-generator (make-parser-generator cps-lr-generate))
+(def essence-cps-lr-parser-generator (make-parser-generator essence-cps-lr-generate))

@@ -5,11 +5,11 @@
 	   :syntax)
 	  (define-data :syntax)))
 
-(define-interface options-interface (export get-options))
+(define-interface essence-options-interface (export get-options))
 
-(define-interface main-interface (export main))
+(define-interface essence-main-interface (export main))
 
-(define-interface grammar-interface
+(define-interface essence-grammars-interface
   (export grammar-productions grammar-nonterminals
 	  grammar-start grammar-error
 	  grammar-number-of-nonterminals
@@ -26,10 +26,10 @@
 	  nonterminal-first sequence-first
 	  nonterminal-follow))
 
-(define-interface scc-union-interface
+(define-interface essence-scc-unions-interface
   (export complete-subsets!))
 
-(define-interface lr-spectime-interface
+(define-interface essence-lr-spectime-interface
   (export compute-lr-closure
 	  compute-slr-closure
 	  goto accept find-eoi-lookahead-item items->lookahead-sets+items
@@ -40,9 +40,9 @@
 	  display-item
 	  check-for-reduce-reduce-conflict check-for-shift-reduce-conflict))
 
-(define-interface parser-interface
+(define-interface essence-parser-interface
   (export parse))
 
-(define-interface parser-generate-interface
+(define-interface essence-parser-generate-interface
   (export generate-parser))
 

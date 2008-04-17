@@ -173,7 +173,7 @@ each node in the parse tree carries an instance of exactly one
 synthesized attribute, and an Essence grammar provides an expression describing 
 how to compute the attribute along with each production.
 
-The structure \codefont{grammar} provides a defining form for
+The structure \codefont{essence-grammars} provides a defining form for
 grammars.  (It also provides numerous accessors and algorithms over
 grammars.  However, these are not relevant for using Essence.)
 
@@ -182,7 +182,7 @@ the grammar itself, and an enumeration (see \filename{doc/big-scheme.txt}
 in the Scheme~48 distribution for a description of the enumeration
 facility in Scheme~48) which is needed to symbolically encode the
 input to the parser.  The macro \codefont{define-grammar} from the
-\codefont{grammar} structure form defines both:
+\codefont{essence-grammars} structure form defines both:
 
 \label{form:define-grammar}
 \proto{define-grammar}{ \meta{variable$_1$} \meta{variable$_2$}\hfill\linebreak\texonly{\hspace*{1em}}
@@ -288,9 +288,9 @@ development of attributed grammars to be used with Essence.
 Essence actually comes with a number of different implementations of
 LR parsing.  The \filename{packages.scm} configuration file contains
 definitions for a range of structures all with the interface
-\codefont{parser-interface}.  The one intended for production use is in the
-\codefont{cps-lr} structure whose implementation resides in
-\filename{cps/cps-lr.scm}.  \codefont{Parser-interface} describes only 
+\codefont{essence-parser-interface}.  The one intended for production use is in the
+\codefont{essence-cps-lr} structure whose implementation resides in
+\filename{cps/cps-lr.scm}.  \codefont{Essence-parser-interface} describes only 
 one binding called \codefont{parse}:
 
 \label{proc:parse}
@@ -375,7 +375,7 @@ essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
 
 \subsubsection*{REPL operation}
 The \filename{generator-packages.scm} configuration file defines a
-structure \codefont{cps-lr-generate} which offers a procedure that
+structure \codefont{essence-cps-lr-generate} which offers a procedure that
 generates specialized parsers:
 
 \proto{generate-parser}{grammar lookahead method goal-name}{procedure}
@@ -451,10 +451,10 @@ the provided example grammars. First, to start the system, type
 % scheme48 -i essence.image -h 8000000
 \end{verbatim}
 at the shell prompt. The mechanism to define a grammar are available from
-structure \codefont{grammar} (see~\ref{sec:grammars}). To open the structure
+structure \codefont{essence-grammars} (see~\ref{sec:grammars}). To open the structure
 type
 \begin{verbatim}
-> ,open grammar
+> ,open essence-grammars
 \end{verbatim}
 to the Scheme48 system, followed by
 \begin{verbatim}
@@ -485,9 +485,9 @@ and closing brackets, whereas \codefont{n} stands for a number.
 \end{verbatim}
 
 To specialize a parser requires to open the structure
-\codefont{cps-lr-generate}:
+\codefont{essence-cps-lr-generate}:
 \begin{verbatim}
-> ,open cps-lr-generate
+> ,open essence-cps-lr-generate
 \end{verbatim}
 The \codefont{generate-parser} function from this structure (see
 Sec.~\ref{sec:parser-generation}) performs the specialization:

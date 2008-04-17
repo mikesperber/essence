@@ -51,6 +51,7 @@ PARSER_VARIANT = cps-lr
 LOOKAHEAD_SOURCE = common/lookahead-trie.scm
 
 PARSER_BASE = $(PARSER_BASE_DIRECTORY)/$(PARSER_VARIANT)
+PARSER_ESSENCE_BASE = $(PARSER_BASE_DIRECTORY)/essence-$(PARSER_VARIANT)
 
 PARSER_SOURCE_FILES = \
 	$(PARSER_BASE).scm
@@ -81,7 +82,7 @@ PARSER_GENEXT_SOURCE_FILES = \
 
 PARSER_GENEXT_CONFIG_FILES = \
 	$(PARSER_CONFIG_FILES) \
-	$(PARSER_BASE)-genext.config.scm \
+	$(PARSER_ESSENCE_BASE)-genext.config.scm \
 	generator-packages.scm
 
 PARSER_SHARE_DIRECTORIES = \
@@ -213,7 +214,7 @@ distclean: clean
 
 pristine: distclean
 	rm -f configure
-	rm -f $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm
+	rm -f $(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm 
 	rm -rf $(GENEXT_DIRECTORY)
 	rm -f doc/essence.ps doc/essence.bbl doc/essence/html/*.html
 
@@ -222,7 +223,7 @@ batch: $(BATCH_IMAGE)
 $(BATCH_IMAGE): $(IMAGE) \
 	common/main.scm
 	(echo ',batch on';						\
-	 echo ",open $(PARSER_VARIANT)-parser-generator";		\
+	 echo ",open essence-$(PARSER_VARIANT)-parser-generator";	\
 	 echo ",build main $(BATCH_IMAGE)";				\
 	 echo ',exit'							\
 	)  | $(SCHEME48) -h $(GENEXT_HEAPSIZE) -i $(IMAGE)
@@ -230,7 +231,7 @@ $(BATCH_IMAGE): $(IMAGE) \
 install-batch:
 	rm -f $(TEMPDIR)/$(BATCH_IMAGE) &&				\
 	(echo ',batch on';						\
-	 echo ",open $(PARSER_VARIANT)-parser-generator";		\
+	 echo ",open essence-$(PARSER_VARIANT)-parser-generator";	\
 	 echo ",build main $(TEMPDIR)/$(BATCH_IMAGE)";			\
 	 echo ',exit'							\
 	)  | $(SCHEME48) -h $(GENEXT_HEAPSIZE) -i $(libdir)/$(IMAGE) &&	\
@@ -239,7 +240,7 @@ install-batch:
 
 image: $(IMAGE)
 
-$(IMAGE): $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm \
+$(IMAGE): $(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm \
 	$(PARSER_GENEXT_CONFIG_FILES)
 	(echo ',batch on';						\
 	 echo ",translate =essence/ `pwd`/";				\
@@ -249,8 +250,8 @@ $(IMAGE): $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm \
 	 for config in $(PARSER_GENEXT_CONFIG_FILES); do		\
 		echo ",config ,load =essence/$$config";			\
 	 done;								\
-	 echo ",load-package $(PARSER_VARIANT)";			\
-	 echo ",load-package $(PARSER_VARIANT)-generate";		\
+	 echo ",load-package essence-$(PARSER_VARIANT)";		\
+	 echo ",load-package essence-$(PARSER_VARIANT)-generate";	\
 	 echo ",dump $(IMAGE) \"$(distname)\"";				\
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(GENEXT_HEAPSIZE)
@@ -266,8 +267,8 @@ install-image: genext \
 	 for config in $(PARSER_GENEXT_CONFIG_FILES); do		\
 		echo ",config ,load =essence/$$config";			\
 	 done;								\
-	 echo ",load-package $(PARSER_VARIANT)";			\
-	 echo ",load-package $(PARSER_VARIANT)-generate";		\
+	 echo ",load-package essence-$(PARSER_VARIANT)";		\
+	 echo ",load-package essence-$(PARSER_VARIANT)-generate";	\
 	 echo ",translate =essence/ $(sharedir)/";			\
 	 echo ",dump $(TEMPDIR)/$(IMAGE) \"$(distname)\"";		\
 	 echo ',exit'							\
@@ -275,9 +276,9 @@ install-image: genext \
 	$(INSTALL_DATA) $(TEMPDIR)/$(IMAGE) $(libdir) &&		\
 	rm $(TEMPDIR)/$(IMAGE)
 
-genext: $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm
+genext: $(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm
 
-$(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm: \
+$(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm: \
 	$(PARSER_SOURCE_FILES) \
 	$(PARSER_GENEXT_SUPPORT_SOURCE_FILES) \
 	$(PARSER_SUPPORT_SOURCE_FILES)
@@ -295,8 +296,8 @@ $(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm: \
 	          '(parse 0 0 0 1)					\
 	          '(goal compute-parser)				\
 	          '(open signals					\
-		         grammar lr-spectime)				\
-	          \"$(PARSER_BASE)-genext.scm\")			\
+		         essence-grammars essence-lr-spectime)		\
+	          \"$(PARSER_ESSENCE_BASE)-genext.scm\")		\
 	         #t)";							\
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(PGG_HEAPSIZE)
@@ -327,7 +328,7 @@ distname = $(RUNNABLE)-1.$(MINOR_VERSION_NUMBER)
 
 dist: import-genext \
 	configure Makefile \
-	$(PARSER_BASE)-genext.scm $(PARSER_BASE)-genext.config.scm \
+	$(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm \
 	doc/essence.ps doc/html/essence.html
 	distname=$(distname) &&						\
 	distfile=$(distdir)/$$distname.tar.gz &&			\
