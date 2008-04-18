@@ -106,12 +106,6 @@
 (define (production-rhs p) (vector-ref p 1))
 (define (production-attribution p) (vector-ref p 2))
 
-(define (attribution-arglist args)
-  (let loop ((i (length args)) (l '()))
-    (if (zero? i)
-	l
-	(loop (- i 1) (cons (concatenate-symbol "$" (number->string i)) l)))))
-
 (define-syntax define-grammar
   (syntax-rules ()
     ((define-grammar grammar-name symbol-enum nts ts s rules)
@@ -120,33 +114,73 @@
        (nonterminals ...)
        (terminals ...)
        start-symbol
-       (((lhs rhs ...) expression) ...)
+       (((lhs rhs ...) expression ...) ...)
        terminal-attribution)
-     (begin
-       (define-enumeration symbol-enum
-	 ($error terminals ... $start nonterminals ...))
-       (define grammar-name
-	 (make-grammar (list (enum symbol-enum $start)
-			     (enum symbol-enum nonterminals) ...)
-		       (list (enum symbol-enum $error)
-			     (enum symbol-enum terminals) ...)
-		       (enum symbol-enum $error)
-		       (enum symbol-enum $start)
-		       (list (make-production
-			      (enum symbol-enum $start)
-			      (list (enum symbol-enum start-symbol))
-			      '(lambda (x) x))
-			     (make-production
-			      (enum symbol-enum lhs)
-			      (list (enum symbol-enum rhs) ...)
-			      `(lambda ,(attribution-arglist '(rhs ...))
-				 expression))
-			     ...)
-		       (lambda (symbol)
-			 (enumerand->name symbol symbol-enum))
-		       'terminal-attribution))))))
+     (define-grammar-1 grammar-name symbol-enum
+       (nonterminals ...)
+       (terminals ...)
+       start-symbol
+       (((lhs rhs ...) expression ...) ...)
+       terminal-attribution))))
 
+(define-syntax define-grammar-1
+  (lambda (e r c)
 
+    (define (attribution-arglist args)
+      (let loop ((i (length args)) (l '()))
+	(if (zero? i)
+	    l
+	    (loop (- i 1) (cons (string->symbol (string-append "$" (number->string i))) l)))))
+
+    (let ((%begin (r 'begin))
+	  (%define-enumeration (r 'define-enumeration))
+	  (%make-grammar (r 'make-grammar))
+	  (%enum (r 'enum))
+	  (%make-production (r 'make-production))
+	  (%list (r 'list))
+	  (%enumerand->name (r 'enumerand->name))
+	  (%define (r 'define))
+	  (%lambda (r 'lambda))
+	  (%attribution-arglist (r 'attribution-arglist)))
+		   
+      (apply
+       (lambda (_ grammar-name symbol-enum
+		  nonterminals terminals start-symbol productions terminal-attribution)
+	 `(,%begin
+	    (,%define-enumeration ,symbol-enum
+	      ($error ,@terminals $start ,@nonterminals))
+	    (,%define ,grammar-name
+	      (,%make-grammar (,%list (,%enum ,symbol-enum $start)
+				      ,@(map (lambda (nt)
+					       `(,%enum ,symbol-enum ,nt))
+					     nonterminals))
+			      (,%list (,%enum ,symbol-enum $error)
+				      ,@(map (lambda (t)
+					       `(,%enum ,symbol-enum ,t))
+					     terminals))
+			      (,%enum ,symbol-enum $error)
+			      (,%enum ,symbol-enum $start)
+			      (,%list (,%make-production
+				       (,%enum ,symbol-enum $start)
+				       (,%list (,%enum ,symbol-enum ,start-symbol))
+				       '(lambda (x) x))
+				      ,@(map (lambda (p)
+					       (let ((rule (car p))
+						     (body (cdr p)))
+						 (let ((lhs (car rule))
+						       (rhs (cdr rule)))
+						   `(,%make-production
+						     (,%enum ,symbol-enum ,lhs)
+						     (,%list ,@(map (lambda (s)
+								      `(,%enum ,symbol-enum ,s))
+								    rhs))
+						     '(lambda ,(attribution-arglist rhs)
+							,@body)))))
+					     productions))
+			    (,%lambda (symbol)
+			      (,%enumerand->name symbol ,symbol-enum))
+			    ',terminal-attribution))))
+       e)))) 
 
 ; nullable computation
 
