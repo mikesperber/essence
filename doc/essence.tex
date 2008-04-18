@@ -186,26 +186,18 @@ input to the parser.  The macro \codefont{define-grammar} from the
 
 \label{form:define-grammar}
 \proto{define-grammar}{ \meta{variable$_1$} \meta{variable$_2$}\hfill\linebreak\texonly{\hspace*{1em}}
-    \meta{nonterminals} \meta{terminals}
+    \meta{terminals}
   \meta{start-symbol} \meta{rules}}{syntax}
 
-\paragraph{Syntax:} \meta{Nonterminals} has the
-form
-%
-\begin{alltt}
-  (\meta{nonterminal} \dotsfoo)
-\end{alltt}
-%
-where each \meta{nonterminal} is an \meta{identifier}.  \meta{Terminals} is
-similarly of the form
+\paragraph{Syntax:} \meta{Terminals} has the form
 %
 \begin{alltt}
   (\meta{terminal} \dotsfoo)
 \end{alltt}
 %
-with \meta{terminal} an \meta{identifier}.  \meta{Terminal} and
-\meta{nonterminal} must be disjoint.  \meta{Start-symbol} must
-be a \meta{nonterminal}.  \meta{Rules} has the form:
+where each \meta{terminal} is an \meta{identifier}.  
+\meta{Start-symbol} must
+be a an identifier.  \meta{Rules} has the form:
 %
 \begin{alltt}
   (\meta{rule} \dotsfoo)
@@ -222,6 +214,10 @@ where each \meta{grammar-symbol} is either a \meta{nonterminal}, a
 \link{error recovery}[ (see
 Sec.~\ref{sec:error-recovery})]{sec:error-recovery} \meta{Attribution}
 is a Scheme expression.
+
+The set of nonterminals is defined by the \meta{nonterminals}s of the
+\meta{rule}s.  The nonterminals must be disjoint from the terminals.
+Moreover, lThe start symbol must be a nonterminal.
 
 \paragraph{Semantics:} \codefont{Define-grammar} defines a
 context-free grammar along with an enumeration type for its symbols.
@@ -248,7 +244,6 @@ Here is a simple example grammar for arithmetic expressions:
 %
 \begin{verbatim}
 (define-grammar g10 g10-symbol
-  (E T P)
   (+ - * / l r n)
   E
   (((E T) $1)
@@ -422,7 +417,6 @@ guaranteed to catch all errors:
 %
 \begin{verbatim}
 (define-grammar g10-error g10-error-symbol
-  (E T P)
   (+ - * / l r n)
   E
   (((E T) $1)

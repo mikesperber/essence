@@ -1,13 +1,11 @@
 ; Balanced parentheses
 
 (define-grammar g00 g00-symbol
-  (S)
   (l)
   S
   (((S l) $1)))
 
 (define-grammar g08 g08-symbol
-  (S T)
   (l r)
   S
   (((S S T) $1)
@@ -18,7 +16,6 @@
 ; Constant arithmetic expressions
 
 (define-grammar g10 g10-symbol
-  (E T P)
   (+ - * / l r n)
   E
   (((E T) $1)
@@ -31,7 +28,6 @@
    ((P l E r) $2)))
 
 (define-grammar g10-error g10-error-symbol
-  (E T P)
   (+ - * / l r n)
   E
   (((E T) $1)
@@ -46,7 +42,6 @@
    ((P l $error r) 0)))
 
 (define-grammar g13 g13-symbol
-  (S SLK NESLK SLD NESLD K P N)
   (comma blah dot)
   S
   (((SLK) $1)
@@ -66,7 +61,6 @@
 ;; javascript example expanded
 
 (define-grammar g14 g14-symbol
-  (S E C A OL AL ON AN)
   (const comma colon lcurly rcurly lbracket rbracket)
   S
   (((S E) $1)
