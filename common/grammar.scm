@@ -113,12 +113,12 @@
     ((define-grammar grammar-name symbol-enum
        (terminals ...)
        start-symbol
-       (((lhs rhs ...) expression ...) ...)
+       ((lhs ((rhs ...) body ...) ...) ...)
        terminal-attribution)
      (define-grammar-1 grammar-name symbol-enum
        (terminals ...)
        start-symbol
-       (((lhs rhs ...) expression ...) ...)
+       ((lhs ((rhs ...) body ...) ...) ...)
        terminal-attribution))))
 
 (define-syntax define-grammar-1
@@ -152,7 +152,7 @@
        (lambda (_ grammar-name symbol-enum
 		  terminals start-symbol productions terminal-attribution)
 	 (let ((nonterminals
-		(delete-duplicates (map caar productions))))
+		(delete-duplicates (map car productions))))
 	   `(,%begin
 	     (,%define-enumeration ,symbol-enum
 	        ($error ,@terminals $start ,@nonterminals))
@@ -171,23 +171,25 @@
 					 (,%enum ,symbol-enum $start)
 					 (,%list (,%enum ,symbol-enum ,start-symbol))
 					 '(lambda (x) x))
-					,@(map (lambda (p)
-						 (let ((rule (car p))
-						       (body (cdr p)))
-						   (let ((lhs (car rule))
-							 (rhs (cdr rule)))
-						     `(,%make-production
-						       (,%enum ,symbol-enum ,lhs)
-						       (,%list ,@(map (lambda (s)
-									`(,%enum ,symbol-enum ,s))
-								      rhs))
-						       '(lambda ,(attribution-arglist rhs)
-							  ,@body)))))
-					       productions))
+					,@(apply append
+						 (map (lambda (p)
+							(let ((lhs (car p)))
+							  (map (lambda (r)
+								 (let ((rhs (car r))
+								       (body (cdr r)))
+								   `(,%make-production
+								     (,%enum ,symbol-enum ,lhs)
+								     (,%list ,@(map (lambda (s)
+										      `(,%enum ,symbol-enum ,s))
+										    rhs))
+								     '(lambda ,(attribution-arglist rhs)
+									,@body))))
+							       (cdr p))))
+					       productions)))
 				(,%lambda (symbol)
 					  (,%enumerand->name symbol ,symbol-enum))
 				',terminal-attribution)))))
-       e)))) 
+       e))))
 
 ; nullable computation
 
