@@ -18,6 +18,14 @@
   (check-exception (parse g10 1 'lr i10-3))
   (check-exception (parse g10 1 'slr i10-3)))
 
+(define-test-case g10-k=2 toy-grammars-tests
+  (check (parse g10 2 'lr i10-1) => 147)
+  (check (parse g10 2 'slr i10-1) => 147)
+  (check-exception (parse g10 2 'lr i10-2))
+  (check-exception (parse g10 2 'slr i10-2))
+  (check-exception (parse g10 2 'lr i10-3))
+  (check-exception (parse g10 2 'slr i10-3)))
+
 (define-test-case g10-error toy-grammars-tests
   (check (parse g10-error 1 'lr i10e-1) => 147)
   (check (parse g10-error 1 'slr i10e-1) => 147)

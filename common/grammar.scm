@@ -10,7 +10,7 @@
 (define-record-type grammar :grammar
   (really-make-grammar nonterminals
 		       terminals
-		       number-of-nonterminals
+		       number-of-terminals
 		       number-of-symbols
 		       error start
 		       productions
@@ -21,7 +21,7 @@
   grammar?
   (nonterminals grammar-nonterminals)
   (terminals grammar-terminals)
-  (number-of-nonterminals grammar-number-of-nonterminals)
+  (number-of-terminals grammar-number-of-terminals)
   (number-of-symbols grammar-number-of-symbols)
   (error grammar-error)
   (start grammar-start)
@@ -31,6 +31,14 @@
   (terminal-attribution grammar-terminal-attribution)
   (properties grammar-properties set-grammar-properties!))
 
+(define (grammar-number-of-nonterminals grammar)
+  (- (grammar-number-of-symbols grammar)
+     (grammar-number-of-terminals grammar)))
+
+(define (grammar-nonterminal-offset grammar)
+  (car (grammar-nonterminals grammar)))
+
+;; at least nonterminals must be sorted
 (define (make-grammar nonterminals terminals
 		      error start
 		      productions
@@ -38,17 +46,18 @@
 		      terminal-attribution)
   (let* ((number-of-nonterminals (length nonterminals))
 	 (number-of-terminals (length terminals))
+	 (number-of-symbols (+ number-of-terminals number-of-nonterminals))
 	 (productions-by-lhs (make-vector number-of-nonterminals)))
     
     (for-each
      (lambda (lhs)
-       (vector-set! productions-by-lhs lhs
+       (vector-set! productions-by-lhs (- lhs number-of-terminals)
 		    (really-productions-with-lhs lhs productions)))
      nonterminals)
 		    
     (really-make-grammar nonterminals terminals
-			 number-of-nonterminals
-			 (+ number-of-nonterminals number-of-terminals)
+			 number-of-terminals
+			 number-of-symbols
 			 error start
 			 productions
 			 productions-by-lhs
@@ -78,13 +87,14 @@
   (car (grammar-productions-with-lhs (grammar-start grammar) grammar)))
 
 (define (terminal? symbol grammar)
-  (>= symbol (grammar-number-of-nonterminals grammar)))
+  (< symbol (grammar-number-of-terminals grammar)))
 
 (define (nonterminal? symbol grammar)
-  (< symbol (grammar-number-of-nonterminals grammar)))
+  (>= symbol (grammar-number-of-terminals grammar)))
 
 (define (grammar-productions-with-lhs lhs grammar)
-  (vector-ref (grammar-productions-by-lhs grammar) lhs))
+  (vector-ref (grammar-productions-by-lhs grammar)
+	      (- lhs (grammar-nonterminal-offset grammar))))
 
 ; Productions are specialized and show up in the specialized output.
 ; Hence, they need equality and an external representation.
@@ -114,7 +124,7 @@
        terminal-attribution)
      (begin
        (define-enumeration symbol-enum
-	 ($start nonterminals ... $error terminals ...))
+	 ($error terminals ... $start nonterminals ...))
        (define grammar-name
 	 (make-grammar (list (enum symbol-enum $start)
 			     (enum symbol-enum nonterminals) ...)
@@ -142,16 +152,17 @@
 
 (define (compute-nonterminal-nullable? grammar)
   
-  (let ((visited-vector
+  (let ((offset (grammar-nonterminal-offset grammar))
+	(visited-vector
 	 (make-vector (grammar-number-of-nonterminals grammar) #f))
 	(nullable-vector
 	 (make-vector (grammar-number-of-nonterminals grammar) #f)))
     
     (define (nullable? nonterminal)
-      (if (vector-ref visited-vector nonterminal)
-	  (vector-ref nullable-vector nonterminal)
+      (if (vector-ref visited-vector (- nonterminal offset))
+	  (vector-ref nullable-vector (- nonterminal offset))
 	  (begin
-	    (vector-set! visited-vector nonterminal #t)
+	    (vector-set! visited-vector (- nonterminal offset) #t)
 	    (let loop ((productions (grammar-productions-with-lhs nonterminal grammar)))
 	      (if (null? productions)
 		  #f
@@ -161,14 +172,14 @@
 				       (nullable? symbol)))
 				(production-rhs production))
 			(begin
-			  (vector-set! nullable-vector nonterminal #t)
+			  (vector-set! nullable-vector (- nonterminal offset) #t)
 			  #t)
 			(loop (cdr productions)))))))))
 
     (for-each nullable? (grammar-nonterminals grammar))
 
     (lambda (nonterminal)
-      (vector-ref nullable-vector nonterminal))))
+      (vector-ref nullable-vector (- nonterminal offset)))))
 
 (define (nonterminal-nullable? nonterminal grammar)
   ((grammar-fetch-property grammar 'nonterminal-nullable?
@@ -183,8 +194,8 @@
 
 ; First set computation
 
-(define (really-nonterminal-first nonterminal first-map)
-  (vector-ref first-map nonterminal))
+(define (really-nonterminal-first grammar nonterminal first-map)
+  (vector-ref first-map (- nonterminal (grammar-nonterminal-offset grammar))))
 
 (define (really-sequence-first sequence k grammar nonterminal-first)
   (let loop ((sequence-rest sequence))
@@ -217,7 +228,7 @@
 	       (really-sequence-first
 		(production-rhs (car ps)) k grammar
 		(lambda (nonterminal k grammar)
-		  (really-nonterminal-first nonterminal old-first)))))
+		  (really-nonterminal-first grammar nonterminal old-first)))))
 	  (loop (cdr ps)
 		(union first rhs-first))))))
 
@@ -227,10 +238,11 @@
 
 (define (next-first-map grammar k last-first-map)
   ;; "Gesamtschritt" step in solving the flow equation system for first_k
-  (let ((new-first-map (make-vector (grammar-number-of-nonterminals grammar))))
+  (let ((new-first-map (make-vector (grammar-number-of-nonterminals grammar)))
+	(offset (grammar-nonterminal-offset grammar)))
     (for-each
      (lambda (nonterminal)
-       (vector-set! new-first-map nonterminal
+       (vector-set! new-first-map (- nonterminal offset)
 		    (lhs-next-first nonterminal k grammar last-first-map)))
      (grammar-nonterminals grammar))
     new-first-map))
@@ -252,7 +264,7 @@
 	  (if (not (map-equal? first-map new-first-map))
 	      (loop new-first-map)
 	      (lambda (nonterminal)
-		(really-nonterminal-first nonterminal first-map)))))))
+		(really-nonterminal-first grammar nonterminal first-map)))))))
 
 (define (nonterminal-first nonterminal k grammar)
   ((grammar-fetch-property grammar (cons 'nonterminal-first k)
@@ -267,7 +279,8 @@
 
 (define (compute-first-1 grammar)
   (let ((first-map (make-vector (grammar-number-of-nonterminals grammar) '()))
-	(depths (make-vector (grammar-number-of-nonterminals grammar) 0)))
+	(depths (make-vector (grammar-number-of-nonterminals grammar) 0))
+	(offset (grammar-nonterminal-offset grammar)))
     
     (define (for-each-nonterminal f)
       (for-each f (grammar-nonterminals grammar)))
@@ -300,19 +313,19 @@
 			(initial-symbols lhs))))
 
     (define (associate-depth! nonterminal depth)
-      (vector-set! depths nonterminal depth))
+      (vector-set! depths (- nonterminal offset) depth))
     
     (define (depth-association nonterminal)
-      (vector-ref depths nonterminal))
+      (vector-ref depths (- nonterminal offset)))
 
     (define (overwrite-first! nonterminal-1 nonterminal-2)
-      (vector-set! first-map nonterminal-1
-		   (vector-ref first-map nonterminal-2)))
+      (vector-set! first-map (- nonterminal-1 offset)
+		   (vector-ref first-map (- nonterminal-2 offset))))
 
     (define (merge-firsts! lhs nonterminal)
-      (vector-set! first-map lhs
-		   (union (vector-ref first-map lhs)
-			  (vector-ref first-map nonterminal))))
+      (vector-set! first-map (- lhs offset)
+		   (union (vector-ref first-map (- lhs offset))
+			  (vector-ref first-map (- nonterminal offset)))))
 
     (for-each
      (lambda (nonterminal)
@@ -321,7 +334,7 @@
 			 (and (terminal? symbol grammar)
 			      (cons symbol '())))
 		       (initial-symbols nonterminal))))
-	 (vector-set! first-map nonterminal
+	 (vector-set! first-map (- nonterminal offset)
 		      (if (nonterminal-nullable? nonterminal grammar)
 			  (cons '() initial)
 			  initial))))
@@ -334,7 +347,7 @@
 		       overwrite-first! merge-firsts!)
 
     (lambda (nonterminal)
-      (vector-ref first-map nonterminal))))
+      (vector-ref first-map (- nonterminal offset)))))
 
 ; Follow set computation
 
@@ -342,7 +355,7 @@
   (let ((follow-map (make-vector (grammar-number-of-nonterminals grammar) '())))
     ;; start symbol must be followed by the empty string to get off the
     ;; ground
-    (vector-set! follow-map (grammar-start grammar) '(()))
+    (vector-set! follow-map (- (grammar-start grammar) (grammar-nonterminal-offset grammar)) '(()))
     follow-map))
 
 ;;; perform
@@ -351,7 +364,8 @@
 ;;; follow-set as appropriate
 
 (define (next-follow-map grammar k last-follow-map)
-  (let ((new-follow-map (copy-vector last-follow-map)))
+  (let ((new-follow-map (copy-vector last-follow-map))
+	(offset (grammar-nonterminal-offset grammar)))
     (let loop ((productions (grammar-productions grammar)))
       (if (not (null? productions))
 	  (let ((lhs (production-lhs (car productions))))
@@ -362,14 +376,14 @@
 		    (if (terminal? sym grammar)
 			(rhs-loop (cdr rhs-rest))
 			(let* ((fi-rest (sequence-first (cdr rhs-rest) k grammar))
-			       (fo-lhs (vector-ref new-follow-map lhs))
+			       (fo-lhs (vector-ref new-follow-map (- lhs offset)))
 			       (fo-sym (uniq
 					(pair-map (lambda (xs ys)
 						    (restricted-append k xs ys))
 						  fi-rest fo-lhs))))
-			  (vector-set! new-follow-map sym
+			  (vector-set! new-follow-map (- sym offset)
 				       (union fo-sym 
-					      (vector-ref new-follow-map sym)))
+					      (vector-ref new-follow-map (- sym offset))))
 			  (rhs-loop (cdr rhs-rest))))))))))
     new-follow-map))
 
@@ -377,19 +391,21 @@
   (if (= 1 k)
       (compute-follow-1 grammar)
       ;; fixpoint iteration
-      (let loop ((follow-map (initial-follow-map grammar)))
-	(let ((new-follow-map (next-follow-map grammar k follow-map)))
-	  (if (not (map-equal? follow-map new-follow-map))
-	      (loop new-follow-map)
-	      (lambda (nonterminal)
-		(vector-ref follow-map nonterminal)))))))
+      (let ((offset (grammar-nonterminal-offset grammar)))
+	(let loop ((follow-map (initial-follow-map grammar)))
+	  (let ((new-follow-map (next-follow-map grammar k follow-map)))
+	    (if (not (map-equal? follow-map new-follow-map))
+		(loop new-follow-map)
+		(lambda (nonterminal)
+		  (vector-ref follow-map (- nonterminal offset)))))))))
 
 ; follow_1 computation
 
 (define (compute-follow-1 grammar)
 
   (let ((follow-map (make-vector (grammar-number-of-nonterminals grammar) '()))
-	(depths (make-vector (grammar-number-of-nonterminals grammar) 0)))
+	(depths (make-vector (grammar-number-of-nonterminals grammar) 0))
+	(offset (grammar-nonterminal-offset grammar)))
 
     (define (for-each-nonterminal f)
       (for-each f (grammar-nonterminals grammar)))
@@ -408,20 +424,20 @@
        (grammar-nonterminals grammar)))
 
     (define (associate-depth! nonterminal depth)
-      (vector-set! depths nonterminal depth))
+      (vector-set! depths (- nonterminal offset) depth))
     
     (define (depth-association nonterminal)
-      (vector-ref depths nonterminal))
+      (vector-ref depths (- nonterminal offset)))
 
     (define (overwrite-follow! nonterminal-1 nonterminal-2)
-      (vector-set! follow-map nonterminal-1
-		   (vector-ref follow-map nonterminal-2)))
+      (vector-set! follow-map (- nonterminal-1 offset)
+		   (vector-ref follow-map (- nonterminal-2 offset))))
 
 
     (define (merge-follows! lhs nonterminal)
-      (vector-set! follow-map lhs
-		   (union (vector-ref follow-map lhs)
-			  (vector-ref follow-map nonterminal))))
+      (vector-set! follow-map (- lhs offset)
+		   (union (vector-ref follow-map (- lhs offset))
+			  (vector-ref follow-map (- nonterminal offset)))))
 
     (for-each
      (lambda (nonterminal)
@@ -429,7 +445,7 @@
 			     (follow '()))
 	 (cond 
 	  ((null? productions)
-	   (vector-set! follow-map nonterminal follow))
+	   (vector-set! follow-map (- nonterminal offset) follow))
 	  ((memv nonterminal (production-rhs (car productions)))
 	   => (lambda (rhs-rest)
 		(let rhs-loop ((rhs-rest (cdr rhs-rest))
@@ -452,8 +468,8 @@
 	   (production-loop (cdr productions) follow)))))
      (grammar-nonterminals grammar))
 
-    (vector-set! follow-map (grammar-start grammar)
-		 (cons '() (vector-ref follow-map (grammar-start grammar))))
+    (vector-set! follow-map (- (grammar-start grammar) offset)
+		 (cons '() (vector-ref follow-map (- (grammar-start grammar) offset))))
 
     (complete-subsets! for-each-nonterminal
 		       =
@@ -462,7 +478,7 @@
 		       overwrite-follow! merge-follows!)
 
     (lambda (nonterminal)
-      (vector-ref follow-map nonterminal))))
+      (vector-ref follow-map (- nonterminal offset)))))
 
 (define (nonterminal-follow nonterminal k grammar)
   ((grammar-fetch-property grammar (cons 'nonterminal-follow k)

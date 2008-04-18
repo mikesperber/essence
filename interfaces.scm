@@ -12,7 +12,9 @@
 (define-interface essence-grammars-interface
   (export grammar-productions grammar-nonterminals
 	  grammar-start grammar-error
-	  grammar-number-of-nonterminals
+	  grammar-number-of-terminals grammar-number-of-nonterminals
+	  grammar-number-of-symbols
+	  grammar-nonterminal-offset
 	  grammar-productions-with-lhs
 	  grammar-fetch-property
 	  grammar-symbol->name

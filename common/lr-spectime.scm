@@ -149,12 +149,13 @@
 		       'predict-sets
 		       (lambda (grammar)
 			 (make-vector (grammar-number-of-nonterminals grammar)
-				      #f)))))
+				      #f))))
+	(offset (grammar-nonterminal-offset grammar)))
 
     (define (compute-predict-lhses lhs already-done)
       (cond
        ((and (null? already-done)
-	     (vector-ref predict-sets lhs))
+	     (vector-ref predict-sets (- lhs offset)))
 	=> identity)
        ((memv lhs already-done)
 	'())
@@ -176,11 +177,11 @@
 
     (define (predict-lhses lhs)
       (cond
-       ((vector-ref predict-sets lhs)
+       ((vector-ref predict-sets (- lhs offset))
 	=> identity)
        (else
 	(let ((lhses (uniq (compute-predict-lhses lhs '()))))
-	  (vector-set! predict-sets lhs lhses)
+	  (vector-set! predict-sets (- lhs offset) lhses)
 	  lhses))))
 
     (let* ((initial-predict-lhses
