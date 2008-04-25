@@ -8,18 +8,17 @@
 (define-primitive error - error)
 
 (define *input* #f)
-(define *error-status* #f)
 
 (define-without-memoization
   (cps-parse grammar k compute-closure state
 	     continuations attribute-values
-	     handle-error)
+	     handle-error error-status)
   (_memo
    (let* ((closure (compute-closure state grammar k))
 	  (accept-items (accept closure))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
-     (define (shift symbol attribute-value handle-error)
+     (define (shift symbol attribute-value handle-error error-status)
        (let* ((next-state (goto closure symbol))
 	      (keep (- (active next-state) 1)))
 	 (cps-parse grammar k compute-closure
@@ -28,9 +27,10 @@
 				 shift-nonterminal)
 			    (c-take keep continuations))
 		    (c-cons attribute-value (c-take keep attribute-values))
-		    handle-error)))
+		    handle-error
+		    error-status)))
      
-     (define (shift-nonterminal nonterminal attribute-value)
+     (define (shift-nonterminal nonterminal attribute-value error-status)
        (_memo
 	(let ((handle-error (if (handles-error? closure grammar)
 				handle-error-here
@@ -39,21 +39,21 @@
 		   (equal? (grammar-start grammar) nonterminal))
 	      (if (stream-empty? *input*)
 		  attribute-value
-		  (handle-error))
+		  (handle-error error-status))
 	      (shift
 	       (the-member nonterminal the-next-nonterminals)
 	       attribute-value
-	       handle-error)))))
+	       handle-error
+	       error-status)))))
 
      ;; error recovery
-     (define (handle-error-here)
+     (define (handle-error-here error-status)
        (let* ((next-state (goto closure (grammar-error grammar)))
 	      (keep (- (active next-state) 1))
 	      (next-closure (compute-closure next-state grammar k))
 	      (next-accept-items (accept next-closure)))
 
 	 (define (recover attribute-value)
-	   (set! *error-status* 3)
 	   (cps-parse grammar k compute-closure
 		      next-state
 		      (c-cons (and (not (null? the-next-nonterminals))
@@ -61,9 +61,9 @@
 			      (c-take keep continuations))
 		      (c-cons attribute-value
 			      (c-take keep attribute-values))
-		      handle-error-here))
+		      handle-error-here 3))
 
-	 (set! *input* (advance-input *error-status* *input*))
+	 (set! *input* (advance-input error-status *input*))
 
 	 (let loop ()
 
@@ -113,7 +113,8 @@
 				   shift-nonterminal)
 			      continuations)
 		      rhs-length)
-	  (item-lhs item) attribute-value)))
+	  (item-lhs item) attribute-value
+	  error-status)))
 
      (check-for-reduce-reduce-conflict closure accept-items grammar k)
      (check-for-shift-reduce-conflict closure accept-items grammar k)
@@ -125,22 +126,21 @@
 	((stream-empty? *input*)
 	 (cond
 	  ((find-eoi-lookahead-item accept-items) => reduce)
-	  (else (handle-error))))
+	  (else (handle-error error-status))))
 	((maybe-the-member (car (stream-car *input*))
 			   (next-terminals closure grammar))
 	 => (lambda (symbol)
 	      (let ((attribute-value (cdr (stream-car *input*))))
 		(set! *input* (stream-cdr *input*))
-		(set! *error-status* (move-error-status *error-status*))
 		(shift symbol attribute-value
-		       handle-error))))
+		       handle-error
+		       (move-error-status error-status)))))
 	((find-lookahead-item accept-items k *input*) => reduce)
-	(else (handle-error)))))))
+	(else (handle-error error-status)))))))
 
 (define (parse grammar k method input)
   (let ((start-production (grammar-start-production grammar)))
     (set! *input* input)
-    (set! *error-status* 0)
     (cps-parse grammar
 	       k
 	       (if (equal? method 'lr)
@@ -153,7 +153,8 @@
 	       (c-nil)
 	       (if #t
 		   (lambda (error-status) (error "unhandled parse error"))
-		   #f))))
+		   #f)
+	       0)))
 
 (define (c-take n l)
   (if (zero? n)
