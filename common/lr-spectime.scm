@@ -328,14 +328,13 @@
 		 (equal? lookahead (item-lookahead item)))
 	       (cdr items)))
       => (lambda (conflict-item)
-	   (display-conflict "Reduce-reduce" (car items) conflict-item grammar)))
+	   (display-conflict "Reduce-reduce" closure (car items) conflict-item grammar)))
      (else
       (loop (cdr items))))))
 
 (define (check-for-shift-reduce-conflict closure accept-items grammar k)
   (let loop ((items closure))
-    (if (null? items)
-	'fick-dich-ins-knie
+    (if (pair? items)
 	(let* ((item (car items))
 	       (rhs-rest (item-rhs-rest item))
 	       (lookahead (item-lookahead item)))
@@ -349,18 +348,48 @@
 			   (member (item-lookahead item) lookaheads))
 			 accept-items)
 		  => (lambda (conflict-item)
-		       (display-conflict "Shift-reduce" (car items) conflict-item
+		       (display-conflict "Shift-reduce" closure (car items) conflict-item
 					 grammar)))
 		 (else
 		  (loop (cdr items))))))))))
 
-(define (display-conflict name item-1 item-2 grammar)
+(define *display-item-closures* #f)
+
+(define (display-conflict name closure item-1 item-2 grammar)
   (display name)
   (display " conflict between items ")
   (display-item item-1 grammar)
   (display " and ")
   (display-item item-2 grammar)
-  (newline))
+  (newline)
+  (if *display-item-closures*
+      (begin
+	(display "State closure:")
+	(display-closure closure grammar))))
+
+(define (display-closure closure grammar)
+  (let loop ((items closure))
+    (if (pair? items)
+	(let ((item (car items)))
+	  (call-with-values
+	      (lambda ()
+		(partition-list
+		 (lambda (other-item)
+		   (and (eq? (item-production item)
+			     (item-production other-item))
+			(= (item-position item)
+			   (item-position other-item))))
+		 items))
+	    (lambda (this-items other-items)
+	      (display-item item grammar)
+	      (display #\space)
+	      (write (map (lambda (item)
+			    (map (lambda (s)
+				   (grammar-symbol->name s grammar))
+				 (item-lookahead item)))
+			  this-items))
+	      (newline)
+	      (loop other-items)))))))
 
 (define (display-item item grammar)
   (display (grammar-symbol->name (item-lhs item) grammar))
@@ -375,9 +404,7 @@
       (display (grammar-symbol->name (car rhs-symbols) grammar))
       (loop (cdr rhs-symbols) (- position 1)))
      ((zero? position)
-      (display " ."))
-     (else
-      'fick-dich-ins-knie))))
+      (display " .")))))
 
 ; List utilities
 
