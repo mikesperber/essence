@@ -9,7 +9,6 @@
 
 (define *input* #f)
 (define *error-status* #f)
-(define *attribute-value* #f)
 
 (define-without-memoization
   (cps-parse grammar k compute-closure state
@@ -20,17 +19,17 @@
 	  (accept-items (accept closure))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
-     (define (shift symbol shift-nonterminal handle-error)
+     (define (shift symbol shift-nonterminal attribute-value handle-error)
        (let* ((next-state (goto closure symbol))
 	      (keep (- (active next-state) 1)))
 	 (cps-parse grammar k compute-closure
 		    next-state
 		    (c-cons shift-nonterminal
 			    (c-take keep continuations))
-		    (c-cons *attribute-value* (c-take keep attribute-values))
+		    (c-cons attribute-value (c-take keep attribute-values))
 		    handle-error)))
      
-     (define (shift-nonterminal nonterminal)
+     (define (shift-nonterminal nonterminal attribute-value)
        (_memo
 	(let ((handle-error (if (handles-error? closure grammar)
 				handle-error-here
@@ -39,11 +38,12 @@
 	  (if (and (initial? state grammar)
 		   (equal? (grammar-start grammar) nonterminal))
 	      (if (null? *input*)
-		  *attribute-value*
+		  attribute-value
 		  (handle-error))
 	      (shift
 	       (the-member nonterminal the-next-nonterminals)
 	       shift-nonterminal
+	       attribute-value
 	       handle-error)))))
 
      ;; error recovery
@@ -106,18 +106,17 @@
      (define (reduce item)
        (let* ((rhs-length (length (item-rhs item)))
 	      (attribution (production-attribution
-			    (item-production item))))
-	 (_memo
-	  (set! *attribute-value*
-		(apply-attribution
-		 attribution
-		 (c-take rhs-length attribute-values))))
+			    (item-production item)))
+	      (attribute-value
+	       (apply-attribution
+		attribution
+		(c-take rhs-length attribute-values))))
 
 	 ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
 				   shift-nonterminal)
 			      continuations)
 		      rhs-length)
-	  (item-lhs item))))
+	  (item-lhs item) attribute-value)))
 
      (check-for-reduce-reduce-conflict closure accept-items grammar k)
      (check-for-shift-reduce-conflict closure accept-items grammar k)
@@ -136,15 +135,15 @@
 	((maybe-the-member (car (car *input*))
 			   (next-terminals closure grammar))
 	 => (lambda (symbol)
-	      (_memo
-	       (begin
-		 (set! *attribute-value* (cdr (car *input*)))
-		 (set! *input* (cdr *input*))
-		 (set! *error-status*
-		       (if (zero? *error-status*)
-			   *error-status*
-			   (- *error-status* 1)))))
-	      (shift symbol maybe-shift-nonterminal handle-error)))
+	      (let ((attribute-value (cdr (car *input*))))
+		(_memo
+		 (begin
+		   (set! *input* (cdr *input*))
+		   (set! *error-status*
+			 (if (zero? *error-status*)
+			     *error-status*
+			     (- *error-status* 1)))))
+		(shift symbol maybe-shift-nonterminal attribute-value handle-error))))
 	((find-lookahead-item accept-items k *input*) => reduce)
 	(else (handle-error)))))))
 
