@@ -13,7 +13,6 @@
 		       number-of-terminals
 		       number-of-symbols
 		       error start
-		       productions
 		       productions-by-lhs
 		       symbol->name-procedure
 		       terminal-attribution
@@ -25,7 +24,6 @@
   (number-of-symbols grammar-number-of-symbols)
   (error grammar-error)
   (start grammar-start)
-  (productions grammar-productions)
   (productions-by-lhs grammar-productions-by-lhs)
   (symbol->name-procedure grammar-symbol->name-procedure)
   (terminal-attribution grammar-terminal-attribution)
@@ -41,34 +39,21 @@
 ;; at least nonterminals must be sorted
 (define (make-grammar nonterminals terminals
 		      error start
-		      productions
+		      productions-by-lhs ; vector, indexed by normalized non-terminal
 		      symbol->name-procedure
 		      terminal-attribution)
   (let* ((number-of-nonterminals (length nonterminals))
 	 (number-of-terminals (length terminals))
-	 (number-of-symbols (+ number-of-terminals number-of-nonterminals))
-	 (productions-by-lhs (make-vector number-of-nonterminals)))
+	 (number-of-symbols (+ number-of-terminals number-of-nonterminals)))
     
-    (for-each
-     (lambda (lhs)
-       (vector-set! productions-by-lhs (- lhs number-of-terminals)
-		    (really-productions-with-lhs lhs productions)))
-     nonterminals)
-		    
     (really-make-grammar nonterminals terminals
 			 number-of-terminals
 			 number-of-symbols
 			 error start
-			 productions
 			 productions-by-lhs
 			 symbol->name-procedure
 			 terminal-attribution
 			 '())))
-
-(define (really-productions-with-lhs lhs productions)
-  (filter (lambda (production)
-	    (equal? lhs (production-lhs production)))
-	  productions))
 
 (define (grammar-fetch-property grammar name proc)
   (cond
@@ -96,9 +81,18 @@
   (vector-ref (grammar-productions-by-lhs grammar)
 	      (- lhs (grammar-nonterminal-offset grammar))))
 
+(define (grammar-for-each-production proc grammar)
+  (do ((offset (grammar-nonterminal-offset grammar))
+       (by-lhs (grammar-productions-by-lhs grammar))
+       (count (grammar-number-of-nonterminals grammar))
+       (i 0 (+ 1 i)))
+      ((= i count))
+    (for-each proc (vector-ref by-lhs i))))
+
 ; Productions are specialized and show up in the specialized output.
 ; Hence, they need equality and an external representation.
 
+; We break this abstraction further below in `define-grammar-2'
 (define (make-production lhs rhs attribution)
   (vector lhs rhs attribution))
 	  
@@ -110,18 +104,37 @@
   (syntax-rules ()
     ((define-grammar grammar-name symbol-enum ts s rules)
      (define-grammar grammar-name symbol-enum ts s rules #f))
-    ((define-grammar grammar-name symbol-enum
+    ((define-grammar grammar-name symbol-enum ts s rules attribution-arglist)
+     (define-grammar-1 grammar-name symbol-enum ts s rules () attribution-arglist))))
+
+; check syntax
+(define-syntax define-grammar-1
+  (syntax-rules ()
+    ((define-grammar-1 grammar-name symbol-enum
        (terminals ...)
        start-symbol
-       ((lhs ((rhs ...) body ...) ...) ...)
+       ((lhs ((rhs ...) body ...) ...) rest ...)
+       (rule ...)
        terminal-attribution)
      (define-grammar-1 grammar-name symbol-enum
        (terminals ...)
        start-symbol
-       ((lhs ((rhs ...) body ...) ...) ...)
+       (rest ...)
+       (rule ... (lhs ((rhs ...) body ...) ...))
+       terminal-attribution))
+    ((define-grammar-1 grammar-name symbol-enum
+       (terminals ...)
+       start-symbol
+       ()
+       (rule ...)
+       terminal-attribution)
+     (define-grammar-2 grammar-name symbol-enum
+       (terminals ...)
+       start-symbol
+       (rule ...)
        terminal-attribution))))
 
-(define-syntax define-grammar-1
+(define-syntax define-grammar-2
   (lambda (e r c)
 
     (define (attribution-arglist args)
@@ -151,41 +164,53 @@
       (apply
        (lambda (_ grammar-name symbol-enum
 		  terminals start-symbol productions terminal-attribution)
-	 (let ((nonterminals
-		(delete-duplicates (map car productions))))
+	 (let* ((nonterminals
+		 (delete-duplicates (map car productions)))
+		(symbols `($error ,@terminals $start ,@nonterminals))
+		(nonterminal-offset (+ 1 (length terminals)))
+		(productions-by-lhs (make-vector (+ 1 (length nonterminals)) '()))
+		(symbol-table
+		 (do ((symbol-table (make-symbol-table))
+		      (i 0 (+ 1 i))
+		      (ss symbols (cdr ss)))
+		     ((null? ss) symbol-table)
+		   (table-set! symbol-table (car ss) i))))
+
+	   (define (symbol-index s)
+	     (or (table-ref symbol-table s)
+		 (car s)))
+
+	   (define (nonterminal-index nt)
+	     (- (symbol-index nt) nonterminal-offset))
+
+	   (define (add-production! prod)
+	     (let ((i (- (vector-ref prod 0) nonterminal-offset)))
+	       (vector-set! productions-by-lhs i
+			    (cons prod (vector-ref productions-by-lhs i)))))
+	   
+	   (add-production! (vector nonterminal-offset (list (symbol-index start-symbol)) '(lambda (x) x)))
+
+	   (for-each (lambda (rule)
+		       (let ((lhs (symbol-index (car rule))))
+			 (for-each (lambda (prod)
+				     (let ((rhs (car prod))
+					   (body (cdr prod)))
+				       (add-production! (vector lhs
+								(map symbol-index rhs)
+								`(lambda ,(attribution-arglist rhs)
+								   ,@body)))))
+				   (cdr rule))))
+		     productions)
+
 	   `(,%begin
 	     (,%define-enumeration ,symbol-enum
-	        ($error ,@terminals $start ,@nonterminals))
+	        ,symbols)
 	     (,%define ,grammar-name
-	        (,%make-grammar (,%list (,%enum ,symbol-enum $start)
-					,@(map (lambda (nt)
-						 `(,%enum ,symbol-enum ,nt))
-					       nonterminals))
-				(,%list (,%enum ,symbol-enum $error)
-					,@(map (lambda (t)
-						 `(,%enum ,symbol-enum ,t))
-					       terminals))
-				(,%enum ,symbol-enum $error)
-				(,%enum ,symbol-enum $start)
-				(,%list (,%make-production
-					 (,%enum ,symbol-enum $start)
-					 (,%list (,%enum ,symbol-enum ,start-symbol))
-					 '(lambda (x) x))
-					,@(apply append
-						 (map (lambda (p)
-							(let ((lhs (car p)))
-							  (map (lambda (r)
-								 (let ((rhs (car r))
-								       (body (cdr r)))
-								   `(,%make-production
-								     (,%enum ,symbol-enum ,lhs)
-								     (,%list ,@(map (lambda (s)
-										      `(,%enum ,symbol-enum ,s))
-										    rhs))
-								     '(lambda ,(attribution-arglist rhs)
-									,@body))))
-							       (cdr p))))
-					       productions)))
+	        (,%make-grammar ',(map symbol-index (cons '$start nonterminals))
+				',(map symbol-index (cons '$error terminals))
+				,(symbol-index '$error)
+				,(symbol-index '$start)
+				',productions-by-lhs
 				(,%lambda (symbol)
 					  (,%enumerand->name symbol ,symbol-enum))
 				',terminal-attribution)))))
@@ -409,25 +434,25 @@
 (define (next-follow-map grammar k last-follow-map)
   (let ((new-follow-map (copy-vector last-follow-map))
 	(offset (grammar-nonterminal-offset grammar)))
-    (let loop ((productions (grammar-productions grammar)))
-      (if (not (null? productions))
-	  (let ((lhs (production-lhs (car productions))))
-	    (let rhs-loop ((rhs-rest (production-rhs (car productions))))
-	      (if (null? rhs-rest)
-		  (loop (cdr productions))
-		  (let ((sym (car rhs-rest)))
-		    (if (terminal? sym grammar)
-			(rhs-loop (cdr rhs-rest))
-			(let* ((fi-rest (sequence-first (cdr rhs-rest) k grammar))
-			       (fo-lhs (vector-ref new-follow-map (- lhs offset)))
-			       (fo-sym (uniq
-					(pair-map (lambda (xs ys)
-						    (restricted-append k xs ys))
-						  fi-rest fo-lhs))))
-			  (vector-set! new-follow-map (- sym offset)
-				       (union fo-sym 
-					      (vector-ref new-follow-map (- sym offset))))
-			  (rhs-loop (cdr rhs-rest))))))))))
+    (grammar-for-each-production
+     (lambda (production)
+       (let ((lhs (production-lhs production)))
+	 (let rhs-loop ((rhs-rest (production-rhs production)))
+	   (if (pair? rhs-rest)
+	       (let ((sym (car rhs-rest)))
+		 (if (terminal? sym grammar)
+		     (rhs-loop (cdr rhs-rest))
+		     (let* ((fi-rest (sequence-first (cdr rhs-rest) k grammar))
+			    (fo-lhs (vector-ref new-follow-map (- lhs offset)))
+			    (fo-sym (uniq
+				     (pair-map (lambda (xs ys)
+						 (restricted-append k xs ys))
+					       fi-rest fo-lhs))))
+		       (vector-set! new-follow-map (- sym offset)
+				    (union fo-sym 
+					   (vector-ref new-follow-map (- sym offset))))
+		       (rhs-loop (cdr rhs-rest)))))))))
+     grammar)
     new-follow-map))
 
 (define (compute-follow grammar k)
@@ -484,31 +509,26 @@
 
     (for-each
      (lambda (nonterminal)
-       (let production-loop ((productions (grammar-productions grammar))
-			     (follow '()))
-	 (cond 
-	  ((null? productions)
-	   (vector-set! follow-map (- nonterminal offset) follow))
-	  ((memv nonterminal (production-rhs (car productions)))
-	   => (lambda (rhs-rest)
-		(let rhs-loop ((rhs-rest (cdr rhs-rest))
-			       (follow follow))
-		  (if (null? rhs-rest)
-		      (production-loop (cdr productions) follow)
-		      (let* ((first (delq '()
-					  (sequence-first rhs-rest 1 grammar)))
-			     (follow (union first follow)))
-			(cond 
-			 ((and (nonterminal? (car rhs-rest) grammar)
-			       (nonterminal-nullable? (car rhs-rest) grammar))
-			  (rhs-loop (cdr rhs-rest) follow))
-			 ((memv nonterminal rhs-rest)
-			  => (lambda (rhs-rest)
-			       (rhs-loop (cdr rhs-rest) follow)))
-			 (else
-			  (production-loop (cdr productions) follow))))))))
-	  (else
-	   (production-loop (cdr productions) follow)))))
+       (let ((follow '()))
+	 (grammar-for-each-production
+	  (lambda (production)
+	    (cond 
+	     ((memv nonterminal (production-rhs production))
+	      => (lambda (rhs-rest)
+		   (let rhs-loop ((rhs-rest (cdr rhs-rest)))
+		     (if (pair? rhs-rest)
+			 (let ((first (delq '()
+					    (sequence-first rhs-rest 1 grammar))))
+			   (set! follow (union first follow))
+			   (cond 
+			    ((and (nonterminal? (car rhs-rest) grammar)
+				  (nonterminal-nullable? (car rhs-rest) grammar))
+			     (rhs-loop (cdr rhs-rest)))
+			    ((memv nonterminal rhs-rest)
+			     => (lambda (rhs-rest)
+				  (rhs-loop (cdr rhs-rest))))))))))))
+	  grammar)
+	 (vector-set! follow-map (- nonterminal offset) follow)))
      (grammar-nonterminals grammar))
 
     (vector-set! follow-map (- (grammar-start grammar) offset)

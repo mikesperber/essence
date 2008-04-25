@@ -9,6 +9,7 @@
 
 (define-structure essence-grammars essence-grammars-interface
   (open scheme big-util define-record-types enumerated essence-scc-unions)
+  (for-syntax (open scheme tables))
   (files (common grammar)))
 
 (define-structure essence-scc-unions essence-scc-unions-interface

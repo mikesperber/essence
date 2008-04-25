@@ -10,7 +10,7 @@
 (define-interface essence-main-interface (export main))
 
 (define-interface essence-grammars-interface
-  (export grammar-productions grammar-nonterminals
+  (export grammar-nonterminals
 	  grammar-start grammar-error
 	  grammar-number-of-terminals grammar-number-of-nonterminals
 	  grammar-number-of-symbols
