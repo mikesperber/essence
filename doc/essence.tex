@@ -160,7 +160,7 @@ make Essence available within Scheme~48, it is always necessary to
 load \filename{interfaces.scm} (via \codefont{,config ,load
   interfaces.scm}).  To run the generic parsers, it is necessary to
 also load \filename{packages.scm}, to use the parser generator,
-\filename{cps/cps-lr-genext.config.scm} and
+\filename{src/cps-lr-genext.config.scm} and
 \filename{generator-packages.scm}.
 
 \section{Grammars}
@@ -286,7 +286,7 @@ LR parsing.  The \filename{packages.scm} configuration file contains
 definitions for a range of structures all with the interface
 \codefont{essence-parser-interface}.  The one intended for production use is in the
 \codefont{essence-cps-lr} structure whose implementation resides in
-\filename{cps/cps-lr.scm}.  \codefont{Essence-parser-interface} describes only 
+\filename{src/cps-lr.scm}.  \codefont{Essence-parser-interface} describes only 
 one binding called \codefont{parse}:
 
 \label{proc:parse}
@@ -318,11 +318,6 @@ attribution associated with the start production.
 If the grammar contains productions containing \codefont{\$error}
 symbols, the parser will attempt \link{error recovery}[ (see
 Sec.~\ref{sec:error-recovery})]{sec:error-recovery} when possible.
-
-Parsing is not reentrant.  (Actually, the \codefont{cps-attrib-error}
-structure implemented by \filename{cps/cps-attrib-error.scm} does
-implement reentrant parsing.  The parser generator does not currently
-use it, however.)
 
 \section{Generating a Specialized Parser}
 \label{sec:parser-generation}
