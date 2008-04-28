@@ -1,9 +1,0 @@
-extract-terminals
-extract-terminals-batch-gambit.c
-extract-terminals-batch-gambit_.c
-extract-terminals-batch.scm
-lr-runtime-gambit.c
-lr-spectime-gambit.c
-source-grammar-gambit.c
-source-grammar-gambit_.c
-*-gambit.c
