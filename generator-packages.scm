@@ -1,29 +1,23 @@
 ;; This depends on packages.scm
 
-(define-module (make-parser-generate genext-structures)
-
-  (define-structure generate-structures essence-parser-generate-interface
-    (open scheme
-	  genext-structures pgg-specialize
-	  cogen-gensym cogen-globals
-	  big-util)
-    (begin
-      (define (generate-parser grammar lookahead method goal-name)
-	; (gensym-ignore-name-stubs!)
-	(set-generate-flat-program! #t)
-	(set-lambda-is-pure! #f)
-	(specialize compute-parser
-		    '(compute-parser 0 0 0 1)
-		    (list grammar lookahead method 'input)
-		    goal-name)
-	(append (filter (lambda (form)	; massive kludge
-			  (not (eq? 'define-data (car form))))
-			*support-code*)
-		(get-residual-program)))))
-
-  generate-structures)
-
-(def essence-cps-lr-generate (make-parser-generate essence-cps-lr-genext))
+(define-structure essence-cps-lr-generate essence-parser-generate-interface
+  (open scheme
+	essence-cps-lr-genext pgg-specialize
+	cogen-gensym cogen-globals
+	big-util)
+  (begin
+    (define (generate-parser grammar lookahead method goal-name)
+					; (gensym-ignore-name-stubs!)
+      (set-generate-flat-program! #t)
+      (set-lambda-is-pure! #f)
+      (specialize compute-parser
+		  '(compute-parser 0 0 0 1)
+		  (list grammar lookahead method 'input)
+		  goal-name)
+      (append (filter (lambda (form)	; massive kludge
+			(not (eq? 'define-data (car form))))
+		      *support-code*)
+	      (get-residual-program)))))
 
 ;; Batch version
 
@@ -32,16 +26,10 @@
   (begin
     (define *grammar-scratch-package* (interaction-environment))))
 
-(define-module (make-parser-generator generate-structures)
-
-  (define-structure generator-structures essence-main-interface
-    (open scheme
-	  essence-options
-	  generate-structures
-	  essence-grammar-scratch-package
-	  i/o os-strings big-util formats exceptions conditions pp)
-    (files (common main)))
-  
-  generator-structures)
-
-(def essence-cps-lr-parser-generator (make-parser-generator essence-cps-lr-generate))
+(define-structure essence-cps-lr-parser-generator essence-main-interface
+  (open scheme
+	essence-options
+	essence-cps-lr-generate
+	essence-grammar-scratch-package
+	i/o os-strings big-util formats exceptions conditions pp)
+  (files (src main)))

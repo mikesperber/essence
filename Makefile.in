@@ -39,64 +39,58 @@ PGG_DIRECTORY = ../cps-mcogen
 PGG_PACKAGES = $(PGG_DIRECTORY)/genext-packages.scm \
 	$(PGG_DIRECTORY)/pgg-packages.scm
 GENEXT_BASE = genext
-GENEXT_VERSION = 1.2
+GENEXT_VERSION = 1.3
 GENEXT_DIRECTORY = genext
 GENEXT_PACKAGES = $(GENEXT_DIRECTORY)/genext-packages.scm
 PGG_HEAPSIZE = 8000000
 GENEXT_HEAPSIZE = 16000000
 
-# In theory, you can change these:
-PARSER_BASE_DIRECTORY = cps
-PARSER_VARIANT = cps-lr
-LOOKAHEAD_SOURCE = common/lookahead-trie.scm
-
-PARSER_BASE = $(PARSER_BASE_DIRECTORY)/$(PARSER_VARIANT)
-PARSER_ESSENCE_BASE = $(PARSER_BASE_DIRECTORY)/essence-$(PARSER_VARIANT)
+# In theory, you can change this:
+LOOKAHEAD_SOURCE = src/lookahead-trie.scm
 
 PARSER_SOURCE_FILES = \
-	$(PARSER_BASE).scm
+	src/cps-lr.scm
 
 PARSER_GENEXT_SUPPORT_SOURCE_FILES = \
-	common/the-trick.scm \
+	src/the-trick.scm \
 	$(LOOKAHEAD_SOURCE) \
-	common/pure.scm \
-	common/memo.scm
+	src/pure.scm \
+	src/memo.scm
 
 PARSER_SUPPORT_SOURCE_FILES = \
-	common/grammar.scm \
-	common/scc-union.scm \
-	common/cogen-directives.scm \
-	common/defdata.scm \
-	common/lr-spectime.scm
+	src/grammar.scm \
+	src/scc-union.scm \
+	src/cogen-directives.scm \
+	src/defdata.scm \
+	src/lr-spectime.scm
 
 BATCH_SUPPORT_SOURCE_FILES = \
-	common/command-line.scm \
-	common/main.scm
+	src/command-line.scm \
+	src/main.scm
 
 PARSER_CONFIG_FILES = \
 	interfaces.scm \
 	packages.scm
 
 PARSER_GENEXT_SOURCE_FILES = \
-	$(PARSER_ESSENCE_BASE)-genext.scm
+	src/essence-cps-lr-genext.scm
 
 PARSER_GENEXT_CONFIG_FILES = \
 	$(PARSER_CONFIG_FILES) \
-	$(PARSER_ESSENCE_BASE)-genext.config.scm \
+	src/essence-cps-lr-genext.config.scm \
 	generator-packages.scm
 
 PARSER_SHARE_DIRECTORIES = \
-	common \
-	$(PARSER_BASE_DIRECTORY) \
+	src \
 	$(GENEXT_DIRECTORY)
 
-# This does not include PARSER_SOURCE_FILES
 PARSER_ALL_SOURCE_FILES = \
 	$(PARSER_SUPPORT_SOURCE_FILES) \
 	$(PARSER_GENEXT_SOURCE_FILES) \
 	$(PARSER_GENEXT_CONFIG_FILES) \
 	$(PARSER_GENEXT_SUPPORT_SOURCE_FILES) \
 	$(BATCH_SUPPORT_SOURCE_FILES) \
+	$(PARSER_SOURCE_FILES) \
 	$(GENEXT_DIRECTORY)/*
 
 PARSER_DOC_FILES = \
@@ -109,28 +103,12 @@ PARSER_EXAMPLE_FILES = \
 	examples/toy-grammars.scm \
 	examples/toy-inputs.scm
 
-PARSER_DS_FILES = \
-	direct/direct-lr-naive.scm \
-	direct/direct-lr-vanilla.scm \
-	direct/direct-lr-imperative.scm \
-	direct/direct-lr.scm
-
-PARSER_CPS_FILES = \
-	cps/cps-lr-naive.scm \
-	cps/cps-lr-vanilla.scm \
-	cps/cps-lr-attrib.scm \
-	cps/cps-lr-attrib.scm \
-	cps/cps-lr-attrib-error.scm \
-	cps/cps-lr.scm
-
 PARSER_DIST_FILES = \
 	$(PARSER_ALL_SOURCE_FILES) \
 	configure configure.in install-sh \
 	Makefile.in \
 	$(PARSER_DOC_FILES) \
 	$(PARSER_EXAMPLE_FILES) \
-	$(PARSER_DS_FILES) \
-	$(PARSER_CPS_FILES) \
 	$(PARSER_GENEXT_SUPPORT_SOURCE_FILES)
 
 IMAGE = essence.image
@@ -214,16 +192,16 @@ distclean: clean
 
 pristine: distclean
 	rm -f configure
-	rm -f $(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm 
+	rm -f src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm 
 	rm -rf $(GENEXT_DIRECTORY)
 	rm -f doc/essence.ps doc/essence.bbl doc/essence/html/*.html
 
 batch: $(BATCH_IMAGE)
 
 $(BATCH_IMAGE): $(IMAGE) \
-	common/main.scm
+	src/main.scm
 	(echo ',batch on';						\
-	 echo ",open essence-$(PARSER_VARIANT)-parser-generator";	\
+	 echo ",open essence-cps-lr-parser-generator";	\
 	 echo ",build main $(BATCH_IMAGE)";				\
 	 echo ',exit'							\
 	)  | $(SCHEME48) -h $(GENEXT_HEAPSIZE) -i $(IMAGE)
@@ -231,7 +209,7 @@ $(BATCH_IMAGE): $(IMAGE) \
 install-batch:
 	rm -f $(TEMPDIR)/$(BATCH_IMAGE) &&				\
 	(echo ',batch on';						\
-	 echo ",open essence-$(PARSER_VARIANT)-parser-generator";	\
+	 echo ",open essence-cps-lr-parser-generator";	\
 	 echo ",build main $(TEMPDIR)/$(BATCH_IMAGE)";			\
 	 echo ',exit'							\
 	)  | $(SCHEME48) -h $(GENEXT_HEAPSIZE) -i $(libdir)/$(IMAGE) &&	\
@@ -240,7 +218,7 @@ install-batch:
 
 image: $(IMAGE)
 
-$(IMAGE): $(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm \
+$(IMAGE): src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm \
 	$(PARSER_GENEXT_CONFIG_FILES)
 	(echo ',batch on';						\
 	 echo ",translate =essence/ `pwd`/";				\
@@ -250,8 +228,8 @@ $(IMAGE): $(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config
 	 for config in $(PARSER_GENEXT_CONFIG_FILES); do		\
 		echo ",config ,load =essence/$$config";			\
 	 done;								\
-	 echo ",load-package essence-$(PARSER_VARIANT)";		\
-	 echo ",load-package essence-$(PARSER_VARIANT)-generate";	\
+	 echo ",load-package essence-cps-lr";		\
+	 echo ",load-package essence-cps-lr-generate";	\
 	 echo ",dump $(IMAGE) \"$(distname)\"";				\
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(GENEXT_HEAPSIZE)
@@ -267,8 +245,8 @@ install-image: genext \
 	 for config in $(PARSER_GENEXT_CONFIG_FILES); do		\
 		echo ",config ,load =essence/$$config";			\
 	 done;								\
-	 echo ",load-package essence-$(PARSER_VARIANT)";		\
-	 echo ",load-package essence-$(PARSER_VARIANT)-generate";	\
+	 echo ",load-package essence-cps-lr";		\
+	 echo ",load-package essence-cps-lr-generate";	\
 	 echo ",translate =essence/ $(sharedir)/";			\
 	 echo ",dump $(TEMPDIR)/$(IMAGE) \"$(distname)\"";		\
 	 echo ',exit'							\
@@ -276,9 +254,9 @@ install-image: genext \
 	$(INSTALL_DATA) $(TEMPDIR)/$(IMAGE) $(libdir) &&		\
 	rm $(TEMPDIR)/$(IMAGE)
 
-genext: $(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm
+genext: src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm
 
-$(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm: \
+src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm: \
 	$(PARSER_SOURCE_FILES) \
 	$(PARSER_GENEXT_SUPPORT_SOURCE_FILES) \
 	$(PARSER_SUPPORT_SOURCE_FILES)
@@ -288,16 +266,16 @@ $(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm: \
 	 echo ',open cogen-globals';					\
 	 echo ',batch off';						\
 	 echo "(begin							\
-                 (cogen-driver '(\"$(PARSER_BASE).scm\"			\
-		  \"common/the-trick.scm\"				\
+                 (cogen-driver '(\"src/cps-lr.scm\"			\
+		  \"src/the-trick.scm\"				\
 		  \"$(LOOKAHEAD_SOURCE)\"				\
-		  \"common/pure.scm\"					\
-		  \"common/memo.scm\")					\
+		  \"src/pure.scm\"					\
+		  \"src/memo.scm\")					\
 	          '(parse 0 0 0 1)					\
 	          '(goal compute-parser)				\
 	          '(open signals					\
 		         essence-grammars essence-lr-spectime)		\
-	          \"$(PARSER_ESSENCE_BASE)-genext.scm\")		\
+	          \"src/essence-cps-lr-genext.scm\")		\
 	         #t)";							\
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(PGG_HEAPSIZE)
@@ -328,7 +306,7 @@ distname = $(RUNNABLE)-1.$(MINOR_VERSION_NUMBER)
 
 dist: import-genext \
 	configure Makefile \
-	$(PARSER_ESSENCE_BASE)-genext.scm $(PARSER_ESSENCE_BASE)-genext.config.scm \
+	src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm \
 	doc/essence.ps doc/html/essence.html
 	distname=$(distname) &&						\
 	distfile=$(distdir)/$$distname.tar.gz &&			\
