@@ -11,8 +11,8 @@
       (set-generate-flat-program! #t)
       (set-lambda-is-pure! #f)
       (specialize compute-parser
-		  '(compute-parser 0 0 0 1)
-		  (list grammar lookahead method 'input)
+		  '(compute-parser 0 0 0 0 1)
+		  (list grammar lookahead method 0 'input)
 		  goal-name)
       (append (filter (lambda (form)	; massive kludge
 			(not (eq? 'define-data (car form))))

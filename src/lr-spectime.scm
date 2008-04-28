@@ -17,6 +17,9 @@
 (define (item-lookahead item)
   (vector-ref item 2))
 
+(define (predict-item? item)
+  (zero? (item-position item)))
+
 (define (lookahead<? la1 la2)
   (number-list<? la1 la2))
 
@@ -368,7 +371,16 @@
 	(display-closure closure grammar))))
 
 (define (display-closure closure grammar)
-  (let loop ((items closure))
+  (call-with-values
+      (lambda ()
+	(partition-list predict-item? closure))
+    (lambda (predict core)
+      (display-items core grammar)
+      (display "----------------") (newline)
+      (display-items predict grammar))))
+
+(define (display-items items grammar)
+  (let loop ((items items))
     (if (pair? items)
 	(let ((item (car items)))
 	  (call-with-values
@@ -405,6 +417,22 @@
       (loop (cdr rhs-symbols) (- position 1)))
      ((zero? position)
       (display " .")))))
+
+(define (trace-state closure grammar)
+  (display "Entering state:") (newline)
+  (display-closure closure grammar))
+
+(define (trace-reduce closure nonterminal grammar)
+  (display "Reducing with ")
+  (display (grammar-symbol->name nonterminal grammar))
+  (display " after returning to:")
+  (newline)
+  (display-closure closure grammar))
+
+(define (trace-shift closure terminal grammar)
+  (display "Shifting with ")
+  (display (grammar-symbol->name terminal grammar))
+  (newline))
 
 ; List utilities
 

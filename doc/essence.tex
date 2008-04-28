@@ -290,7 +290,7 @@ definitions for a range of structures all with the interface
 one binding called \codefont{parse}:
 
 \label{proc:parse}
-\proto{parse}{grammar lookahead method input}{procedure}
+\proto{parse}{grammar lookahead method trace-level input}{procedure}
 %
 \begin{itemize}
 \item \var{Grammar} is a grammar defined by \codefont{define-grammar}.
@@ -299,6 +299,11 @@ one binding called \codefont{parse}:
 \item \var{Method} is a symbol, either \codefont{lr} or
   \codefont{slr}, specifying the parsing method used---either full LR
   parsing or SLR parsing.
+\item \var{Trace-level} is 0, 1, or 2 depending on the amount of
+  tracing desired.  0 means no tracing, 1 means that the closure of
+  the state where an error is encountered is passed to
+  \ide{parse-error}.  2 means that the states encountered during
+  parsing are printed.
 \item \var{Input} is a list of pairs; each pair consists of an enumerand of the
   terminals of \var{grammar} and the corresponding attribute value.  It is the
   input to the parser. 
@@ -328,10 +333,16 @@ a grammar, lookahead, and parsing method.  Essence offers a (Unix)
 batch version of the parser generator, as well as a Scheme~48 package
 which allows access from within a REPL.
 
-In order to run, specialized parsers require an \codefont{error}
-procedure which accepts one argument, an error
-message.  The specialized parser will call \codefont{error} when an
-unrecoverable error occurs.
+In order to run, specialized parsers require an \codefont{parse-error}
+procedure.  The specialized parser will call \codefont{parse-error} when an
+unrecoverable error occurs.  It has the following signature:
+
+\proto{parse-error}{message maybe-closure symbol input}{procedure}
+%
+Here, \var{maybe-closure} is either \verb|#f| or the LR closure in
+which the error occurred, depending on the tracing level.
+\var{Symbol} is the symbol on which the parser tried to shift, and
+\var{input} is the remaining input.
 
 \subsubsection*{Batch operation}
 Installation of Essence creates a binary called \filename{essence}.
@@ -470,7 +481,7 @@ As a sample run, consider the grammar \codefont{g10} which specifies arithmetic
 expressions. The terminals \codefont{l} and \codefont{r} stand for opening
 and closing brackets, whereas \codefont{n} stands for a number.
 \begin{verbatim}
-> (parse g10 1 'lr i10-1)
+> (parse g10 1 'lr 0 i10-1)
 147
 \end{verbatim}
 

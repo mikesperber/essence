@@ -21,12 +21,17 @@
   (files (src lr-spectime)))
 
 (define-structure essence-cps-lr essence-parser-interface
-  (open scheme signals essence-grammars essence-lr-spectime
+  (open scheme
+	srfi-23 ; ERROR
+	essence-grammars essence-lr-spectime
 	cogen-directives)
   (files (src the-trick)
 	 (src lookahead-trie)
 	 (src memo)
-	 (src cps-lr)))
+	 (src cps-lr))
+  (begin
+    (define (parse-error message closure symbol input)
+      (error message closure symbol input))))
 
 (define-structure essence-tests (export toy-grammars-tests)
   (open scheme

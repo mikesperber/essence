@@ -39,8 +39,9 @@
 	  active next-terminals next-nonterminals
 	  make-item
 	  item-lhs item-rhs item-production item-lookahead
-	  display-item
-	  check-for-reduce-reduce-conflict check-for-shift-reduce-conflict))
+	  display-item display-closure
+	  check-for-reduce-reduce-conflict check-for-shift-reduce-conflict
+	  trace-state trace-shift trace-reduce))
 
 (define-interface essence-parser-interface
   (export parse))

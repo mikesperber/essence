@@ -5,15 +5,19 @@
   (c-cons c-car c-cdr)
   (c-nil))
 
-(define-primitive error - dynamic)
+(define-primitive parse-error - dynamic)
 
 (define-without-memoization
   (cps-parse grammar k compute-closure state
 	     continuations attribute-values
 	     handle-error error-status
+	     trace-level
 	     input)
   (_memo
    (let* ((closure (compute-closure state grammar k))
+	  (trace-closure (if (>= trace-level 1)
+			     closure
+			     #f))
 	  (accept-items (accept closure))
 	  (the-next-nonterminals (next-nonterminals closure grammar)))
 
@@ -25,8 +29,8 @@
 		    (c-cons shift-nonterminal
 			    (c-take keep continuations))
 		    (c-cons attribute-value (c-take keep attribute-values))
-		    handle-error
-		    error-status
+		    handle-error error-status
+		    trace-level
 		    input)))
      
      (define (shift-nonterminal nonterminal attribute-value error-status input)
@@ -35,11 +39,13 @@
 				handle-error-here
 				handle-error))
 	      (shift-nonterminal shift-nonterminal))
+	  (if (>= trace-level 2)
+	      (trace-reduce closure nonterminal grammar))
 	  (if (and (initial? state grammar)
 		   (equal? (grammar-start grammar) nonterminal))
 	      (if (null? input)
 		  attribute-value
-		  (handle-error error-status input))
+		  (handle-error error-status trace-closure nonterminal input))
 	      (shift
 	       (the-member nonterminal the-next-nonterminals)
 	       shift-nonterminal
@@ -49,7 +55,7 @@
 	       input)))))
 
      ;; error recovery
-     (define (handle-error-here error-status input)
+     (define (handle-error-here error-status _closure _symbol input)
        (let* ((next-state (goto closure (grammar-error grammar)))
 	      (keep (- (active next-state) 1))
 	      (next-closure (compute-closure next-state grammar k))
@@ -58,7 +64,7 @@
 	       (cond
 		((zero? error-status) input)
 		((null? input)
-		 (error "parse error: premature end of input"))
+		 (parse-error "parse error: premature end of input" closure #f '()))
 		(else (cdr input)))))
 
 	 (define (recover attribute-value input)
@@ -70,6 +76,7 @@
 		      (c-cons attribute-value
 			      (c-take keep attribute-values))
 		      handle-error-here 3
+		      trace-level
 		      input))
 
 	 (let loop ((input input))
@@ -91,7 +98,8 @@
 	     ((null? input)
 	      (cond
 	       ((find-eoi-lookahead-item next-accept-items) => reduce-recover)
-	       (else (error "parse error: premature end of input"))))
+	       (else (parse-error "parse error: premature end of input"
+				  trace-closure #f '()))))
 	     ((maybe-the-member (car (car input))
 				(next-terminals next-closure grammar))
 	      => (lambda (symbol)
@@ -118,6 +126,9 @@
 	  error-status
 	  input)))
 
+     (if (>= trace-level 2)
+	 (trace-state closure grammar))
+
      (check-for-reduce-reduce-conflict closure accept-items grammar k)
      (check-for-shift-reduce-conflict closure accept-items grammar k)
 
@@ -131,10 +142,12 @@
 	((null? input)
 	 (cond
 	  ((find-eoi-lookahead-item accept-items) => reduce)
-	  (else (handle-error error-status input))))
+	  (else (handle-error error-status trace-closure #f input))))
 	((maybe-the-member (car (car input))
 			   (next-terminals closure grammar))
 	 => (lambda (symbol)
+	      (if (>= trace-level 2)
+		  (trace-shift closure symbol grammar))
 	      (shift symbol maybe-shift-nonterminal (cdr (car input))
 		     handle-error
 		     (if (zero? error-status)
@@ -142,9 +155,10 @@
 			 (- error-status 1))
 		     (cdr input))))
 	((find-lookahead-item accept-items k input) => reduce)
-	(else (handle-error error-status input)))))))
+	(else
+	 (handle-error error-status trace-closure #f input)))))))
 
-(define (parse grammar k method input)
+(define (parse grammar k method trace-level input)
   (let ((start-production (grammar-start-production grammar)))
 
     (cps-parse grammar
@@ -158,9 +172,12 @@
 	       (c-nil)
 	       (c-nil)
 	       (if #t
-		   (lambda (error-status input) (error "unhandled parse error"))
+		   (lambda (error-status closure symbol input)
+		     (parse-error "unhandled parse error" closure
+				  symbol input))
 		   #f)
 	       0
+	       trace-level
 	       input)))
 
 (define (c-take n l)

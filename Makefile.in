@@ -271,7 +271,7 @@ src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm: \
 		  \"$(LOOKAHEAD_SOURCE)\"				\
 		  \"src/pure.scm\"					\
 		  \"src/memo.scm\")					\
-	          '(parse 0 0 0 1)					\
+	          '(parse 0 0 0 0 1)					\
 	          '(goal compute-parser)				\
 	          '(open signals					\
 		         essence-grammars essence-lr-spectime)		\
