@@ -155,35 +155,31 @@
 				      #f))))
 	(offset (grammar-nonterminal-offset grammar)))
 
-    (define (compute-predict-lhses lhs already-done)
-      (cond
-       ((and (null? already-done)
-	     (vector-ref predict-sets (- lhs offset)))
-	=> identity)
-       ((memv lhs already-done)
-	'())
-       (else
-	(let* ((lhses
-		(filter
-		 (lambda (lhs)
-		   (not (memv lhs already-done)))
-		 (sequences-initial-nonterminals
-		  (map production-rhs
-		       (grammar-productions-with-lhs lhs grammar))
-		  grammar)))
-	       (already-done (cons lhs already-done)))
-	  (cons lhs
-		(flatten
-		 (map (lambda (lhs)
-			(compute-predict-lhses lhs already-done))
-		      lhses)))))))
+    (define (compute-predict-lhses lhs)
+      (let ((already-done '()))
+	(let recur ((lhs lhs))
+	  (cond
+	   ((and (null? already-done)
+		 (vector-ref predict-sets (- lhs offset))))
+	   ((memv lhs already-done) '())
+	   (else
+	    (let ((lhses
+		   (filter
+		    (lambda (lhs)
+		      (not (memv lhs already-done)))
+		    (sequences-initial-nonterminals
+		     (map production-rhs
+			  (grammar-productions-with-lhs lhs grammar))
+		     grammar))))
+	      (set! already-done (cons lhs already-done))
+	      (cons lhs (flatten (map recur lhses)))))))))
 
     (define (predict-lhses lhs)
       (cond
        ((vector-ref predict-sets (- lhs offset))
 	=> identity)
        (else
-	(let ((lhses (uniq (compute-predict-lhses lhs '()))))
+	(let ((lhses (compute-predict-lhses lhs)))
 	  (vector-set! predict-sets (- lhs offset) lhses)
 	  lhses))))
 
