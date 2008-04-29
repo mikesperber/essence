@@ -218,7 +218,8 @@ install-batch:
 
 image: $(IMAGE)
 
-$(IMAGE): src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm \
+$(IMAGE): import-genext \
+	src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm \
 	$(PARSER_GENEXT_CONFIG_FILES)
 	(echo ',batch on';						\
 	 echo ",translate =essence/ `pwd`/";				\
