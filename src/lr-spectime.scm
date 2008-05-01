@@ -364,16 +364,18 @@
   (if *display-item-closures*
       (begin
 	(display "State closure:")
-	(display-closure closure grammar))))
+	(display-closure closure #t grammar))))
 
-(define (display-closure closure grammar)
+(define (display-closure closure predict? grammar)
   (call-with-values
       (lambda ()
 	(partition-list predict-item? closure))
     (lambda (predict core)
       (display-items core grammar)
-      (display "----------------") (newline)
-      (display-items predict grammar))))
+      (if predict?
+	  (begin
+	    (display "----------------") (newline)
+	    (display-items predict grammar))))))
 
 (define (display-items items grammar)
   (let loop ((items items))
@@ -414,18 +416,31 @@
      ((zero? position)
       (display " .")))))
 
-(define (trace-state closure grammar)
-  (display "Entering state:") (newline)
-  (display-closure closure grammar))
+(define (trace-state trace-level closure input grammar)
+  (display "Entering state")
+  (display-trace-input input grammar)
+  (display ":") (newline)
+  (display-closure closure (>= trace-level 3) grammar))
 
-(define (trace-reduce closure nonterminal grammar)
+(define (trace-reduce trace-level closure nonterminal input grammar)
   (display "Reducing with ")
   (display (grammar-symbol->name nonterminal grammar))
+  (display-trace-input input grammar)
   (display " after returning to:")
   (newline)
-  (display-closure closure grammar))
+  (display-closure closure (>= trace-level 3) grammar))
 
-(define (trace-shift closure terminal grammar)
+(define (display-trace-input input grammar)
+  (display " (looking at ")
+  (if (pair? input)
+      (begin
+	(display (grammar-symbol->name (caar input) grammar))
+	(display ", ")
+	(write (cdar input)))
+      (display "EOF"))
+  (display ")"))
+
+(define (trace-shift trace-level closure terminal grammar)
   (display "Shifting with ")
   (display (grammar-symbol->name terminal grammar))
   (newline))

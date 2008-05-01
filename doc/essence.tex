@@ -299,11 +299,11 @@ one binding called \codefont{parse}:
 \item \var{Method} is a symbol, either \codefont{lr} or
   \codefont{slr}, specifying the parsing method used---either full LR
   parsing or SLR parsing.
-\item \var{Trace-level} is 0, 1, or 2 depending on the amount of
+\item \var{Trace-level} is 0, 1, 2, 3 depending on the amount of
   tracing desired.  0 means no tracing, 1 means that the closure of
   the state where an error is encountered is passed to
   \ide{parse-error}.  2 means that the states encountered during
-  parsing are printed.
+  parsing are printed, 3 means that the complete closures are printed.
 \item \var{Input} is a list of pairs; each pair consists of an enumerand of the
   terminals of \var{grammar} and the corresponding attribute value.  It is the
   input to the parser. 

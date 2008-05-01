@@ -40,7 +40,7 @@
 				handle-error))
 	      (shift-nonterminal shift-nonterminal))
 	  (if (>= trace-level 2)
-	      (trace-reduce closure nonterminal grammar))
+	      (trace-reduce trace-level closure nonterminal input grammar))
 	  (if (and (initial? state grammar)
 		   (equal? (grammar-start grammar) nonterminal))
 	      (if (null? input)
@@ -127,7 +127,7 @@
 	  input)))
 
      (if (>= trace-level 2)
-	 (trace-state closure grammar))
+	 (trace-state trace-level closure input grammar))
 
      (check-for-reduce-reduce-conflict closure accept-items grammar k)
      (check-for-shift-reduce-conflict closure accept-items grammar k)
@@ -147,7 +147,7 @@
 			   (next-terminals closure grammar))
 	 => (lambda (symbol)
 	      (if (>= trace-level 2)
-		  (trace-shift closure symbol grammar))
+		  (trace-shift trace-level closure symbol grammar))
 	      (shift symbol maybe-shift-nonterminal (cdr (car input))
 		     handle-error
 		     (if (zero? error-status)
