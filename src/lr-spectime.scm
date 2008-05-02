@@ -317,40 +317,58 @@
 
 ; Conflict handling
 
+(define (conflict-items=? item-1 item-2)
+  (and (eq? (item-production item-1)
+	    (item-production item-2))
+       (= (item-position item-1)
+	  (item-position item-2))))
+
+(define (conflict-items-present? item-1 item-2 list)
+  (any? (lambda (p)
+	  (and (conflict-items=? item-1 (car p))
+	       (conflict-items=? item-2 (cdr p))))
+	list))
+
 (define (check-for-reduce-reduce-conflict closure accept-items grammar k)
-  (let loop ((items accept-items))
+  (let loop ((items accept-items)
+	     (done '()))
     (cond
-     ((null? items)
-      'fick-dich-ins-knie)
+     ((null? items))
      ((let ((lookahead (item-lookahead (car items))))
 	(first (lambda (item)
 		 (equal? lookahead (item-lookahead item)))
 	       (cdr items)))
       => (lambda (conflict-item)
-	   (display-conflict "Reduce-reduce" closure (car items) conflict-item grammar)))
+	   (if (conflict-items-present? (car items) conflict-item done)
+	       (loop (cdr items) done)
+	       (begin
+		 (display-conflict "Reduce-reduce" closure (car items) conflict-item grammar)
+		 (loop (cdr items)
+		       (cons (cons (car items) conflict-item) done))))))
      (else
-      (loop (cdr items))))))
+      (loop (cdr items) done)))))
 
 (define (check-for-shift-reduce-conflict closure accept-items grammar k)
-  (let loop ((items closure))
-    (if (pair? items)
-	(let* ((item (car items))
-	       (rhs-rest (item-rhs-rest item))
-	       (lookahead (item-lookahead item)))
-	  (if (or (null? rhs-rest)
-		  (nonterminal? (car rhs-rest) grammar))
-	      (loop (cdr items))
-	      (let ((lookaheads (sequence-first (append rhs-rest lookahead)
-						k grammar)))
-		(cond
-		 ((first (lambda (item)
-			   (member (item-lookahead item) lookaheads))
-			 accept-items)
-		  => (lambda (conflict-item)
-		       (display-conflict "Shift-reduce" closure (car items) conflict-item
-					 grammar)))
-		 (else
-		  (loop (cdr items))))))))))
+  (let ((done '()))
+    (for-each
+     (lambda (item)
+       (let ((rhs-rest (item-rhs-rest item))
+	     (lookahead (item-lookahead item)))
+	 (if (not (or (null? rhs-rest)
+		      (nonterminal? (car rhs-rest) grammar)))
+	     (let ((lookaheads (sequence-first (append rhs-rest lookahead)
+					       k grammar)))
+	       (cond
+		((first (lambda (accept-item)
+			  (member (item-lookahead accept-item) lookaheads))
+			accept-items)
+		 => (lambda (conflict-item)
+		      (if (not (conflict-items-present? item conflict-item done))
+			  (begin
+			    (set! done (cons (cons item conflict-item) done))
+			    (display-conflict "Shift-reduce" closure item conflict-item
+					      grammar))))))))))
+     closure)))
 
 (define *display-item-closures* #f)
 
@@ -422,11 +440,15 @@
   (display ":") (newline)
   (display-closure closure (>= trace-level 3) grammar))
 
-(define (trace-reduce trace-level closure nonterminal input grammar)
+(define (trace-reduce trace-level closure nonterminal attribute-value input grammar)
   (display "Reducing with ")
   (display (grammar-symbol->name nonterminal grammar))
   (display-trace-input input grammar)
-  (display " after returning to:")
+  (display " yielding:")
+  (newline)
+  (write attribute-value)
+  (newline)
+  (display "after returning to:")
   (newline)
   (display-closure closure (>= trace-level 3) grammar))
 

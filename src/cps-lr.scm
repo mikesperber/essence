@@ -40,7 +40,7 @@
 				handle-error))
 	      (shift-nonterminal shift-nonterminal))
 	  (if (>= trace-level 2)
-	      (trace-reduce trace-level closure nonterminal input grammar))
+	      (trace-reduce trace-level closure nonterminal attribute-value input grammar))
 	  (if (and (initial? state grammar)
 		   (equal? (grammar-start grammar) nonterminal))
 	      (if (null? input)
