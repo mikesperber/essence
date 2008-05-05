@@ -1,6 +1,7 @@
 (define *options*
   '(("help" "h" help)
     ("states" "s" states) 
+    ("pretty-print" "p" "pp" pretty-print)
     ("g" "goal-proc" "goal-procedure" parameter goal-procedure)
     ("m" "method" parameter method)
     ("l" "lookahead" parameter lookahead)))
@@ -15,6 +16,7 @@
     "        ( -m method | --method=method )"
     "        ( -l lookahead | -lookahead=lookahead )"
     "        ( -s | --states)"
+    "        ( -p | --pp --pretty-print)"
     "        input-file grammar-name output-file"
     ""
     "where method must be slr or lr, and lookahead a non-negative number."
@@ -100,8 +102,11 @@
 		(trace-states!))
 	    (let* ((grammar (eval grammar-name *grammar-scratch-package*))
 		   (parser (generate-parser grammar lookahead method goal-name)))
-		(with-output-to-file output-file-name
-		  (lambda ()
-		    (for-each p parser))))))))))
+	      (with-output-to-file output-file-name
+		(lambda ()
+		  (for-each (if (assq 'pretty-print options)
+				p
+				(lambda (form) (write form) (newline)))
+			    parser))))))))))
   0)
 
