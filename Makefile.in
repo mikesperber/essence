@@ -303,7 +303,7 @@ import-genext:
 	$(ZCAT) $(PGG_DIRECTORY)/$(GENEXT_BASE)-$(GENEXT_VERSION).tar.gz\
 	| (cd $(GENEXT_DIRECTORY); $(TAR) xvf -)
 
-distname = $(RUNNABLE)-1.$(MINOR_VERSION_NUMBER)
+distname = $(RUNNABLE)-2.$(MINOR_VERSION_NUMBER)
 
 dist: import-genext \
 	configure Makefile \
