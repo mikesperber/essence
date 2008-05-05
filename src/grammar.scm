@@ -8,7 +8,8 @@
 ; - the start production is first
 
 (define-record-type grammar :grammar
-  (really-make-grammar nonterminals
+  (really-make-grammar name enum-name
+		       nonterminals
 		       terminals
 		       number-of-terminals
 		       number-of-symbols
@@ -18,6 +19,8 @@
 		       terminal-attribution
 		       properties)
   grammar?
+  (name grammar-name)
+  (enum-name grammar-enum-name)
   (nonterminals grammar-nonterminals)
   (terminals grammar-terminals)
   (number-of-terminals grammar-number-of-terminals)
@@ -37,7 +40,8 @@
   (car (grammar-nonterminals grammar)))
 
 ;; at least nonterminals must be sorted
-(define (make-grammar nonterminals terminals
+(define (make-grammar name enum-name
+		      nonterminals terminals
 		      error start
 		      productions-by-lhs ; vector, indexed by normalized non-terminal
 		      symbol->name-procedure
@@ -46,7 +50,8 @@
 	 (number-of-terminals (length terminals))
 	 (number-of-symbols (+ number-of-terminals number-of-nonterminals)))
     
-    (really-make-grammar nonterminals terminals
+    (really-make-grammar name enum-name
+			 nonterminals terminals
 			 number-of-terminals
 			 number-of-symbols
 			 error start
@@ -206,7 +211,8 @@
 	     (,%define-enumeration ,symbol-enum
 	        ,symbols)
 	     (,%define ,grammar-name
-	        (,%make-grammar ',(map symbol-index (cons '$start nonterminals))
+	        (,%make-grammar ',grammar-name ',symbol-enum
+				',(map symbol-index (cons '$start nonterminals))
 				',(map symbol-index (cons '$error terminals))
 				,(symbol-index '$error)
 				,(symbol-index '$start)
@@ -215,6 +221,15 @@
 					  (,%enumerand->name symbol ,symbol-enum))
 				',terminal-attribution)))))
        e))))
+
+(define (grammar-define-enumeration-form grammar)
+  `(define-enumeration ,(grammar-enum-name grammar)
+     (,@(map (lambda (s)
+	       (grammar-symbol->name s grammar))
+	     (grammar-terminals grammar))
+      ,@(map (lambda (s)
+	       (grammar-symbol->name s grammar))
+	     (grammar-nonterminals grammar)))))
 
 ; nullable computation
 

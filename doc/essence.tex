@@ -374,6 +374,20 @@ essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
 \item \texttt{Lookahead} is the lookahead size, a non-negative
   number.  The default is \texttt{1}.
 \end{itemize}
+%
+In addition to the \texttt{goal-proc} procedure, the output file also
+contains a \texttt{define-\linebreak[0]enumeration} form that defines the mapping
+between grammar symbols and enumeration values.  The form has the
+following syntax:
+
+\proto{define-enumeration}{ \meta{identifier} (\meta{symbol} \ldots)}
+
+The identifier is the name of the enumeration type of the grammar, and
+the \meta{symbol}s are the names of all terminals and nonterminals of
+the grammar (including \texttt{\$error}).  The first \meta{symbol} is
+mapped to enumeration value 0, the second to 1, and so forth.  The
+\texttt{define-enumeration} form is suitable for use with Scheme~48's
+\texttt{enumerated} package.
 
 \subsubsection*{REPL operation}
 The \filename{generator-packages.scm} configuration file defines a

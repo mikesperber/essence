@@ -2,6 +2,7 @@
 
 (define-structure essence-cps-lr-generate essence-parser-generate-interface
   (open scheme
+	essence-grammars
 	essence-cps-lr-genext pgg-specialize
 	cogen-gensym cogen-globals
 	big-util)
@@ -14,10 +15,12 @@
 		  '(compute-parser 0 0 0 0 1)
 		  (list grammar lookahead method 0 'input)
 		  goal-name)
-      (append (filter (lambda (form)	; massive kludge
-			(not (eq? 'define-data (car form))))
-		      *support-code*)
-	      (get-residual-program)))))
+      (cons
+       (grammar-define-enumeration-form grammar)
+       (append (filter (lambda (form)	; massive kludge
+			 (not (eq? 'define-data (car form))))
+		       *support-code*)
+	       (get-residual-program))))))
 
 ;; Batch version
 

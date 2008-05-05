@@ -24,6 +24,8 @@
 	  terminal? nonterminal?
 	  (define-grammar :syntax)
 
+	  grammar-define-enumeration-form
+
 	  nonterminal-nullable? sequence-nullable?
 	  nonterminal-first sequence-first
 	  nonterminal-follow))
