@@ -111,13 +111,11 @@
      ;; normal operation
      (define (reduce item)
        (let* ((rhs-length (length (item-rhs item)))
-	      (attribution (production-attribution
-			    (item-production item)))
-	      (attribute-value
-	       (apply-attribution
-		attribution
-		(c-take rhs-length attribute-values))))
-
+	      (attribution (production-attribution (item-production item)))
+	      (attribute-value (_memo (apply-attribution
+				       attribution
+				       (c-take rhs-length attribute-values)))))
+	      
 	 ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
 				   shift-nonterminal)
 			      continuations)
