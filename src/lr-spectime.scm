@@ -369,6 +369,10 @@
      closure)))
 
 (define *display-item-closures* #f)
+(define *trace-state* #f)
+
+(define (trace-states!)
+  (set! *trace-state* 0))
 
 (define (display-conflict name closure item-1 item-2 grammar)
   (display name)
@@ -432,7 +436,15 @@
      ((zero? position)
       (display " .")))))
 
-(define (trace-state trace-level closure input grammar)
+(define (trace-state trace-level closure grammar)
+  (if *trace-state*
+      (begin
+	(display "State ") (display *trace-state*)
+	(newline)
+	(display-closure closure #t grammar)
+	(set! *trace-state* (+ 1 *trace-state*)))))
+
+(define (trace-enter trace-level closure input grammar)
   (display "Entering state")
   (display-trace-input input grammar)
   (display ":") (newline)

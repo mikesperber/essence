@@ -127,7 +127,9 @@
 	  input)))
 
      (if (>= trace-level 2)
-	 (trace-state trace-level closure input grammar))
+	 (trace-enter trace-level closure input grammar))
+
+     (trace-state trace-level closure grammar)
 
      (check-for-reduce-reduce-conflict closure accept-items grammar k)
      (check-for-shift-reduce-conflict closure accept-items grammar k)
