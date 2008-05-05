@@ -112,17 +112,18 @@
      (define (reduce item)
        (let* ((rhs-length (length (item-rhs item)))
 	      (attribution (production-attribution (item-production item)))
-	      (attribute-value (_memo (apply-attribution
-				       attribution
-				       (c-take rhs-length attribute-values)))))
-	      
-	 ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
-				   shift-nonterminal)
-			      continuations)
-		      rhs-length)
-	  (item-lhs item) attribute-value
-	  error-status
-	  input)))
+	      (lhs (item-lhs item)))
+	 (_memo
+	  ((c-list-ref (c-cons (and (not (null? the-next-nonterminals))
+				    shift-nonterminal)
+			       continuations)
+		       rhs-length)
+	   lhs
+	   (apply-attribution
+	    attribution
+	    (c-take rhs-length attribute-values))
+	   error-status
+	   input))))
 
      (if (>= trace-level 2)
 	 (trace-enter trace-level closure input grammar))
