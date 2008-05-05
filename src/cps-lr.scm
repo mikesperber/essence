@@ -143,8 +143,10 @@
 	 (cond
 	  ((find-eoi-lookahead-item accept-items) => reduce)
 	  (else (handle-error error-status trace-closure #f input))))
-	((maybe-the-member (car (car input))
-			   (next-terminals closure grammar))
+	((let ((terminals (next-terminals closure grammar)))
+	   (and (pair? terminals)
+		;; avoid touch input if there aren't any terminals
+		(maybe-the-member (car (car input)) terminals)))
 	 => (lambda (symbol)
 	      (if (>= trace-level 2)
 		  (trace-shift trace-level closure symbol grammar))
@@ -202,7 +204,6 @@
 	(loop (c-cdr l) (c-cons (c-car l) r)))))
 
 (define-primitive apply - apply)
-(define-primitive cons - pure)
 
 (define (apply-attribution a l)
   (apply (eval a (interaction-environment)) (c-list->list (c-reverse l))))
