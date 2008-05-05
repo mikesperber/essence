@@ -153,9 +153,7 @@
 		  (trace-shift trace-level closure symbol grammar))
 	      (shift symbol maybe-shift-nonterminal (cdr (car input))
 		     handle-error
-		     (if (zero? error-status)
-			 error-status
-			 (- error-status 1))
+		     (max (- error-status 1) 0)
 		     (cdr input))))
 	((find-lookahead-item accept-items k input) => reduce)
 	(else
