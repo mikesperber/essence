@@ -1,5 +1,6 @@
 (define *options*
   '(("help" "h" help)
+    ("states" "s" states) 
     ("g" "goal-proc" "goal-procedure" parameter goal-procedure)
     ("m" "method" parameter method)
     ("l" "lookahead" parameter lookahead)))
@@ -13,6 +14,7 @@
     "essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )"
     "        ( -m method | --method=method )"
     "        ( -l lookahead | -lookahead=lookahead )"
+    "        ( -s | --states)"
     "        input-file grammar-name output-file"
     ""
     "where method must be slr or lr, and lookahead a non-negative number."
@@ -94,10 +96,12 @@
 	     
 	    (load input-file-name *grammar-scratch-package*)
 	     
-	    (let ((grammar (eval grammar-name *grammar-scratch-package*)))
-	      (let ((parser (generate-parser grammar lookahead method goal-name)))
+	    (if (assq 'states options)
+		(trace-states!))
+	    (let* ((grammar (eval grammar-name *grammar-scratch-package*))
+		   (parser (generate-parser grammar lookahead method goal-name)))
 		(with-output-to-file output-file-name
 		  (lambda ()
-		    (for-each p parser)))))))))))
+		    (for-each p parser))))))))))
   0)
 

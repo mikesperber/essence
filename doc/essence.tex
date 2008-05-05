@@ -353,6 +353,7 @@ prints a synopsis of its syntax:
 essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
         ( -m method | --method=method )
         ( -l lookahead | -lookahead=lookahead )
+        ( -s | --states)
         input-file grammar-name output-file
 \end{verbatim}
 %
@@ -375,6 +376,9 @@ essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
   number.  The default is \texttt{1}.
 \end{itemize}
 %
+If the \texttt{-s} or \texttt{--states} option is supplied, Essence
+will print the states of the LR automaton to standard output.
+
 In addition to the \texttt{goal-proc} procedure, the output file also
 contains a \texttt{define-\linebreak[0]enumeration} form that defines the mapping
 between grammar symbols and enumeration values.  The form has the

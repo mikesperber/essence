@@ -32,7 +32,7 @@
 (define-structure essence-cps-lr-parser-generator essence-main-interface
   (open scheme
 	essence-options
-	essence-cps-lr-generate
+	essence-cps-lr-generate essence-lr-spectime
 	essence-grammar-scratch-package
 	i/o os-strings big-util formats exceptions conditions pp)
   (files (src main)))
