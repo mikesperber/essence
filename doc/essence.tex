@@ -354,6 +354,7 @@ essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
         ( -m method | --method=method )
         ( -l lookahead | -lookahead=lookahead )
         ( -s | --states)
+        ( -p | --pp --pretty-print)
         input-file grammar-name output-file
 \end{verbatim}
 %
@@ -378,6 +379,11 @@ essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
 %
 If the \texttt{-s} or \texttt{--states} option is supplied, Essence
 will print the states of the LR automaton to standard output.
+
+If the \texttt{-p}, \texttt{--pp}, or \texttt{--pretty-print}option is
+supplied, Essence will pretty-print the source code of the generated
+parser instead of justing using \texttt{write}.  Note that this
+increases the size of the output substantially.
 
 In addition to the \texttt{goal-proc} procedure, the output file also
 contains a \texttt{define-\linebreak[0]enumeration} form that defines the mapping
