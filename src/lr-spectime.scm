@@ -354,20 +354,18 @@
      (lambda (item)
        (let ((rhs-rest (item-rhs-rest item))
 	     (lookahead (item-lookahead item)))
-	 (if (not (or (null? rhs-rest)
-		      (nonterminal? (car rhs-rest) grammar)))
+	 (if (and (pair? rhs-rest)
+		  (terminal? (car rhs-rest) grammar))
 	     (let ((lookaheads (sequence-first (append rhs-rest lookahead)
 					       k grammar)))
-	       (cond
-		((first (lambda (accept-item)
-			  (member (item-lookahead accept-item) lookaheads))
-			accept-items)
-		 => (lambda (conflict-item)
-		      (if (not (conflict-items-present? item conflict-item done))
-			  (begin
-			    (set! done (cons (cons item conflict-item) done))
-			    (display-conflict "Shift-reduce" closure item conflict-item
-					      grammar))))))))))
+	       (for-each (lambda (conflict-item)
+			   (if (and (member (item-lookahead conflict-item) lookaheads)
+				    (not (conflict-items-present? item conflict-item done)))
+			       (begin
+				 (set! done (cons (cons item conflict-item) done))
+				 (display-conflict "Shift-reduce" closure item conflict-item
+						   grammar))))
+			 accept-items)))))
      closure)))
 
 (define *display-item-closures* #f)
