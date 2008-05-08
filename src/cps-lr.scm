@@ -55,57 +55,41 @@
 	       input)))))
 
      ;; error recovery
-     (define (handle-error-here error-status _closure _symbol input)
+     (define (handle-error-here error-status _closure _symbol start-input)
        (let* ((next-state (goto closure (grammar-error grammar)))
 	      (keep (- (active next-state) 1))
 	      (next-closure (compute-closure next-state grammar k))
-	      (next-accept-items (accept next-closure))
-	      (input
-	       (cond
-		((zero? error-status) input)
-		((null? input)
-		 (parse-error "parse error: premature end of input" closure #f '()))
-		(else (cdr input)))))
+	      (next-accept-items (accept next-closure)))
 
-	 (define (recover attribute-value input)
-	   (cps-parse grammar k compute-closure
-		      next-state
-		      (c-cons (and (not (null? the-next-nonterminals))
-				   shift-nonterminal)
-			      (c-take keep continuations))
-		      (c-cons attribute-value
-			      (c-take keep attribute-values))
-		      handle-error-here 3
-		      trace-level
-		      input))
+	 (let loop ((input start-input))
 
-	 (let loop ((input input))
-
-	   (define (reduce-recover item)
-	     (let* ((rhs-length (length (item-rhs item)))
-		    (attribution (production-attribution
-				  (item-production item)))
-		    (attribute-value
-		     (apply-attribution
-		      attribution
-		      (c-cons #f
-			      (c-take (- rhs-length 1)
-				      attribute-values)))))
-	       (recover attribute-value input)))
+	   (define (recover)
+	     (parse-error "trying to recover from parse error"
+			  trace-closure error-status #t #f start-input)
+	     (cps-parse grammar k compute-closure
+			next-state
+			(c-cons (and (not (null? the-next-nonterminals))
+				     shift-nonterminal)
+				(c-take keep continuations))
+			(c-cons #f
+				(c-take keep attribute-values))
+			handle-error-here 0
+			trace-level
+			input))
 
 	   (_memo
 	    (cond
 	     ((null? input)
-	      (cond
-	       ((find-eoi-lookahead-item next-accept-items) => reduce-recover)
-	       (else (parse-error "parse error: premature end of input"
-				  trace-closure #f '()))))
-	     ((maybe-the-member (car (car input))
-				(next-terminals next-closure grammar))
-	      => (lambda (symbol)
-		   (recover (cdr (car input)) input)))
-	     ((find-lookahead-item next-accept-items k input)
-	      => reduce-recover)
+	      (if (find-eoi-lookahead-item next-accept-items)
+		  (recover)
+		  (parse-error "parse error: premature end of input"
+			       trace-closure error-status #f #f '())))
+	     ((or (let ((terminals (next-terminals next-closure grammar)))
+		    (and (pair? terminals)
+			 ;; avoid touching the input if there aren't any terminals
+			 (maybe-the-member (car (car input)) terminals)))
+		  (find-lookahead-item next-accept-items k input))
+	      (recover))
 	     (else (loop (cdr input))))))))
 
      ;; normal operation
@@ -119,9 +103,8 @@
 			       continuations)
 		       rhs-length)
 	   lhs
-	   (apply-attribution
-	    attribution
-	    (c-take rhs-length attribute-values))
+	   (apply-attribution attribution
+			      (c-take rhs-length attribute-values))
 	   error-status
 	   input))))
 
@@ -146,14 +129,15 @@
 	  (else (handle-error error-status trace-closure #f input))))
 	((let ((terminals (next-terminals closure grammar)))
 	   (and (pair? terminals)
-		;; avoid touch input if there aren't any terminals
+		;; avoid touching the input if there aren't any terminals
 		(maybe-the-member (car (car input)) terminals)))
 	 => (lambda (symbol)
 	      (if (>= trace-level 2)
 		  (trace-shift trace-level closure symbol grammar))
 	      (shift symbol maybe-shift-nonterminal (cdr (car input))
 		     handle-error
-		     (max (- error-status 1) 0)
+		     (_memo (and error-status ; prevent contaxt propagation
+				 (+ error-status 1)))
 		     (cdr input))))
 	((find-lookahead-item accept-items k input) => reduce)
 	(else
@@ -175,9 +159,9 @@
 	       (if #t
 		   (lambda (error-status closure symbol input)
 		     (parse-error "unhandled parse error" closure
-				  symbol input))
+				  error-status #f symbol input))
 		   #f)
-	       0
+	       #f
 	       trace-level
 	       input)))
 

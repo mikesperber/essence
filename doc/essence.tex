@@ -337,10 +337,16 @@ In order to run, specialized parsers require an \codefont{parse-error}
 procedure.  The specialized parser will call \codefont{parse-error} when an
 unrecoverable error occurs.  It has the following signature:
 
-\proto{parse-error}{message maybe-closure symbol input}{procedure}
+\proto{parse-error}{message closure error-status recovering? symbol input}{procedure}
 %
-Here, \var{maybe-closure} is either \verb|#f| or the LR closure in
-which the error occurred, depending on the tracing level.
+Here, \var{closure} is either \verb|#f| or the LR closure in which the
+error occurred, depending on the tracing level.  \var{Error-status} is
+either \verb|#f| if this is the first parse error, or a non-negative
+exact integer saying how many lexemes have been consumed since the
+last error.  \var{Recovering?} says whether this is an error from the
+recovering action of the parser (see section~\ref{sec:error-recovery},
+and hence \codefont{parse-error} may return, or whether the parser
+cannot recover, and hence \codefont{parse-error} should not return.
 \var{Symbol} is the symbol on which the parser tried to shift, and
 \var{input} is the remaining input.
 
@@ -439,9 +445,12 @@ until the next input terminal is acceptable as the next input symbol
 \emph{after} it has consumed \codefont{\$error}.  Subsequently, the
 parser resumes work as usual.
 
-To prevent excessive avalanching of error messages, the parser makes
-sure that it consumes at least three input terminals after an
-attempted error recovery until it attempts recovery again.
+To prevent excessive avalanching of error messages, the
+\codefont{parse-error} procedure (see
+section~\ref{sec:parser-generation}) should examine the
+\var{error-status} argument, and typically assure that a certain
+number of terminals have been consumed since the last error before
+reporting a new one.
 
 Here is an example for the constant arithmetic expressions grammar
 guaranteed to catch all errors:

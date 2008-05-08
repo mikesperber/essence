@@ -30,8 +30,17 @@
 	 (src memo)
 	 (src cps-lr))
   (begin
-    (define (parse-error message closure symbol input)
-      (error message closure symbol input))))
+    (define (parse-error message closure error-status recovering? symbol input)
+      (if recovering?
+	  (begin
+	    (display message)
+	    (if error-status
+		(begin
+		  (display "; last error was ")
+		  (display error-status)
+		  (display " lexemes ago")
+		  (newline))))
+	  (error message closure symbol input)))))
 
 (define-structure essence-tests (export toy-grammars-tests)
   (open scheme
