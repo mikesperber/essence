@@ -35,7 +35,7 @@ BIBTEX = bibtex
 HYPERLATEX = hyperlatex
 SCHEME48 = scheme48
 
-PGG_DIRECTORY = ../cps-mcogen
+PGG_DIRECTORY = ../pgg
 PGG_PACKAGES = $(PGG_DIRECTORY)/genext-packages.scm \
 	$(PGG_DIRECTORY)/pgg-packages.scm
 GENEXT_BASE = genext
