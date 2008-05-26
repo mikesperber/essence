@@ -178,9 +178,7 @@ grammars.  (It also provides numerous accessors and algorithms over
 grammars.  However, these are not relevant for using Essence.)
 
 An Essence grammar consists of two data objects: a representation of
-the grammar itself, and an enumeration (see \filename{doc/big-scheme.txt}
-in the Scheme~48 distribution for a description of the enumeration
-facility in Scheme~48) which is needed to symbolically encode the
+the grammar itself, and an enumeration which is needed to symbolically encode the
 input to the parser.  The macro \codefont{define-grammar} from the
 \codefont{essence-grammars} structure form defines both:
 
@@ -271,6 +269,14 @@ with components (in that order):
 \item the terminals in the same order as the \codefont{define-grammar}
   form.
 \end{itemize}
+%
+The members of the enumeration may be accessed using the
+\codefont{enumerated} structure that comes with Scheme~48:
+\codefont{(enum g10-symbol +)}, for instance, is an expression whose
+value is an exact non-negative integer, corresponding to the position
+of \codefont{+} in the enumeration, in this case 5 (it's the first
+terminal, after three nonterminals, \codefont{\$start}, and
+\codefont{\$error}).
 
 \section{Running a Parser}
 \label{sec:running-a-parser}
