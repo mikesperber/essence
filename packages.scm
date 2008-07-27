@@ -20,27 +20,41 @@
   (open scheme big-util sort essence-grammars)
   (files (src lr-spectime)))
 
-(define-structure essence-cps-lr essence-parser-interface
-  (open scheme
-	srfi-23 ; ERROR
-	essence-grammars essence-lr-spectime
-	cogen-directives)
-  (files (src the-trick)
-	 (src lookahead-trie)
-	 (src memo)
-	 (src cps-lr))
-  (begin
-    (define (parse-error message closure error-status recovering? symbol input)
-      (if recovering?
-	  (begin
-	    (display message)
-	    (if error-status
-		(begin
-		  (display "; last error was ")
-		  (display error-status)
-		  (display " lexemes ago")
-		  (newline))))
-	  (error message closure symbol input)))))
+(define-interface essence-inputs-interface
+  (export input-null? input-car input-cdr))
+
+(define-structure essence-list-inputs essence-inputs-interface
+  (open (modify scheme
+		(rename (car input-car) (cdr input-cdr) (null? input-null?))
+		(expose car cdr null?))))
+
+(define-module (make-essence-cps-lr input-structure)
+  (define-structure cps-lr essence-parser-interface
+    (open scheme
+	  input-structure
+	  srfi-23			; ERROR
+	  essence-grammars essence-lr-spectime
+	  cogen-directives)
+    (files (src the-trick)
+	   (src lookahead-trie)
+	   (src memo)
+	   (src cps-lr))
+    (begin
+      (define (parse-error message closure error-status recovering? symbol input)
+	(if recovering?
+	    (begin
+	      (display message)
+	      (if error-status
+		  (begin
+		    (display "; last error was ")
+		    (display error-status)
+		    (display " lexemes ago")
+		    (newline))))
+	    (error message closure symbol input)))))
+
+  cps-lr)
+
+(define essence-cps-lr (make-essence-cps-lr essence-list-inputs))
 
 (define-structure essence-tests (export toy-grammars-tests)
   (open scheme
@@ -51,7 +65,6 @@
   (files (examples toy-grammars-test)
 	 (examples toy-grammars)
 	 (examples toy-inputs)))
-
 
 (define-structure essence-cps-lr-generate essence-parser-generate-interface
   (open scheme
