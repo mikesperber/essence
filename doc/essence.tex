@@ -153,15 +153,32 @@ dependencies on non-standard features of Scheme48 which Essence uses
 have been carefully factored out with the help of the Scheme~48 module
 system; making it work in any given Scheme implementation is not hard.
 
-The Essence distribution contains four files to be loaded into
+The Essence distribution contains three files to be loaded into
 Scheme~48's configuration package: \filename{interfaces.scm},
-\filename{packages.scm}, and \filename{generator-packages.scm}.  To
+\filename{packages.scm}, and \filename{src/cps-lr-genext.config.scm}.  To
 make Essence available within Scheme~48, it is always necessary to
 load \filename{interfaces.scm} (via \codefont{,config ,load
-  interfaces.scm}).  To run the generic parsers, it is necessary to
-also load \filename{packages.scm}, to use the parser generator,
-\filename{src/cps-lr-genext.config.scm} and
-\filename{generator-packages.scm}.
+  interfaces.scm}) and \filename{packages.scm}
+(via \codefont{,config ,load
+  packages.scm}).  To use the parser generator, it is also necessary
+to load \filename{genext/genext-packages.scm} from the Essence
+distribution, as well as \filename{src/cps-lr-genext.config.scm}.
+To make this process more convenient, Essence includes a file
+\filename{load-essence.scm} which is written in the exec language of
+Scheme~48.  To load it, invoke this in the Scheme 48 REPL:
+%
+\begin{verbatim}
+,exec ,load load-essence.scm
+\end{verbatim}
+%
+This will output a warning which can safely be ignored:
+%
+\begin{verbatim}
+Warning: undefined variables
+         #{Package 250 config}
+         essence-cps-lr-genext
+         (&warning)
+\end{verbatim}
 
 \section{Grammars}
 \label{sec:grammars}

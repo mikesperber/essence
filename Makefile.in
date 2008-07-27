@@ -77,8 +77,7 @@ PARSER_GENEXT_SOURCE_FILES = \
 
 PARSER_GENEXT_CONFIG_FILES = \
 	$(PARSER_CONFIG_FILES) \
-	src/essence-cps-lr-genext.config.scm \
-	generator-packages.scm
+	src/essence-cps-lr-genext.config.scm
 
 PARSER_SHARE_DIRECTORIES = \
 	src \
