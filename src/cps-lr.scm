@@ -122,26 +122,31 @@
 	   (maybe-shift-nonterminal
 	    (and (not (null? the-next-nonterminals))
 		 shift-nonterminal)))
-       (cond
-	((input-null? input)
-	 (cond
-	  ((find-eoi-lookahead-item accept-items) => reduce)
-	  (else (handle-error error-status trace-closure #f input))))
-	((let ((terminals (next-terminals closure grammar)))
-	   (and (pair? terminals)
-		;; avoid touching the input if there aren't any terminals
-		(maybe-the-member (car (input-car input)) terminals)))
-	 => (lambda (symbol)
-	      (if (>= trace-level 2)
-		  (trace-shift trace-level closure symbol grammar))
-	      (shift symbol maybe-shift-nonterminal (cdr (input-car input))
-		     handle-error
-		     (_memo (and error-status ; prevent contaxt propagation
-				 (+ error-status 1)))
-		     (input-cdr input))))
-	((find-lookahead-item accept-items k input) => reduce)
-	(else
-	 (handle-error error-status trace-closure #f input)))))))
+       (if (input-null? input)
+	   (cond
+	    ((find-eoi-lookahead-item accept-items) => reduce)
+	    (else (handle-error error-status trace-closure #f input)))
+	   (let ((terminals (next-terminals closure grammar)))
+	     (cond
+	      ((pair? terminals)
+	       ;; avoid touching (input-car input) twice
+	       (let ((first (input-car input)))
+		 (cond
+		  ((maybe-the-member (car first) terminals)
+		   => (lambda (symbol)
+			(if (>= trace-level 2)
+			    (trace-shift trace-level closure symbol grammar))
+			(shift symbol maybe-shift-nonterminal (cdr first)
+			       handle-error
+			       (_memo (and error-status ; prevent contaxt propagation
+					   (+ error-status 1)))
+			       (input-cdr input))))
+		  ((find-lookahead-item accept-items k input) => reduce)
+		  (else
+		   (handle-error error-status trace-closure #f input)))))
+	      ((find-lookahead-item accept-items k input) => reduce)
+	      (else
+	       (handle-error error-status trace-closure #f input)))))))))
 
 (define (parse grammar k method trace-level input)
   (let ((start-production (grammar-start-production grammar)))
