@@ -26,7 +26,7 @@
   (check-exception (parse g10 2 'lr 0 i10-3))
   (check-exception (parse g10 2 'slr 0 i10-3)))
 
-(define-test-case g10-error toy-grammars-tests
+'(define-test-case g10-error toy-grammars-tests
   (check (parse g10-error 1 'lr 0 i10e-1) => 147)
   (check (parse g10-error 1 'slr 0 i10e-1) => 147)
   (check (parse g10-error 1 'lr 0 i10e-2) => 28)

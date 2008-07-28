@@ -153,15 +153,32 @@ dependencies on non-standard features of Scheme48 which Essence uses
 have been carefully factored out with the help of the Scheme~48 module
 system; making it work in any given Scheme implementation is not hard.
 
-The Essence distribution contains four files to be loaded into
+The Essence distribution contains three files to be loaded into
 Scheme~48's configuration package: \filename{interfaces.scm},
-\filename{packages.scm}, and \filename{generator-packages.scm}.  To
+\filename{packages.scm}, and \filename{src/cps-lr-genext.config.scm}.  To
 make Essence available within Scheme~48, it is always necessary to
 load \filename{interfaces.scm} (via \codefont{,config ,load
-  interfaces.scm}).  To run the generic parsers, it is necessary to
-also load \filename{packages.scm}, to use the parser generator,
-\filename{src/cps-lr-genext.config.scm} and
-\filename{generator-packages.scm}.
+  interfaces.scm}) and \filename{packages.scm}
+(via \codefont{,config ,load
+  packages.scm}).  To use the parser generator, it is also necessary
+to load \filename{genext/genext-packages.scm} from the Essence
+distribution, as well as \filename{src/cps-lr-genext.config.scm}.
+To make this process more convenient, Essence includes a file
+\filename{load-essence.scm} which is written in the exec language of
+Scheme~48.  To load it, invoke this in the Scheme 48 REPL:
+%
+\begin{verbatim}
+,exec ,load load-essence.scm
+\end{verbatim}
+%
+This will output a warning which can safely be ignored:
+%
+\begin{verbatim}
+Warning: undefined variables
+         #{Package 250 config}
+         essence-cps-lr-genext
+         (&warning)
+\end{verbatim}
 
 \section{Grammars}
 \label{sec:grammars}
@@ -310,8 +327,8 @@ one binding called \codefont{parse}:
   the state where an error is encountered is passed to
   \ide{parse-error}.  2 means that the states encountered during
   parsing are printed, 3 means that the complete closures are printed.
-\item \var{Input} is a list of pairs; each pair consists of an enumerand of the
-  terminals of \var{grammar} and the corresponding attribute value.  It is the
+\item \var{Input} is a list of pairs; each pair consists of an
+  enumerand of the terminals of \var{grammar} and the corresponding attribute value.  It is the
   input to the parser. 
   
   The enumerands are the \emph{ordinal numbers} of the enumerated
@@ -326,6 +343,18 @@ one binding called \codefont{parse}:
 tree induced by \var{input}.  This is ultimately the result of the
 attribution associated with the start production.
 
+The \codefont{parse} procedure can be applied to sequence
+representations other than lists: To this end, Essence includes a
+parameterized structure \codefont{make-essence-cps-lr}, which takes a
+structure with interface \codefont{essence-list-inputs-interface} as
+an argument.  This interface includes only the three procedures
+\codefont{input-null?}, \codefont{input-car}, and
+\codefont{input-cdr}, which are used in the same way as
+\codefont{null?}, \codefont{car}, and \codefont{cdr}.   The
+``default'' implementation used by the \codefont{essence-cps-lr} structure
+is \codefont{essence-list-inputs}, which defines these to the list
+procedures.
+
 If the grammar contains productions containing \codefont{\$error}
 symbols, the parser will attempt \link{error recovery}[ (see
 Sec.~\ref{sec:error-recovery})]{sec:error-recovery} when possible.
@@ -339,9 +368,12 @@ a grammar, lookahead, and parsing method.  Essence offers a (Unix)
 batch version of the parser generator, as well as a Scheme~48 package
 which allows access from within a REPL.
 
-In order to run, specialized parsers require an \codefont{parse-error}
-procedure.  The specialized parser will call \codefont{parse-error} when an
-unrecoverable error occurs.  It has the following signature:
+In order to run, the specialized parsers require definitions for
+\codefont{input-null?}, \codefont{input-car}, and \codefont{input-cdr}
+as described in the previous section.  Moreover, they require an
+\codefont{parse-error} procedure.  The specialized parser will call
+\codefont{parse-error} when an unrecoverable error occurs.  It has the
+following signature:
 
 \proto{parse-error}{message closure error-status recovering? symbol input}{procedure}
 %

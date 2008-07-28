@@ -13,7 +13,7 @@
       ((zero? remaining)
        (cdar lookaheads+items))
       ((and (not (= k remaining))
-	    (null? input))	; we covered this previously
+	    (input-null? input))	; we covered this previously
        (let ((empties
 	      (filter (lambda (lookahead+item)
 			(null? (car lookahead+item)))
@@ -23,9 +23,9 @@
 	     (cdar empties))))
       (else
        (loop (filter-lookaheads+items lookaheads+items
-				      (car (car input)))
+				      (car (input-car input)))
 	     (- remaining 1)
-	     (cdr input)))))))
+	     (input-cdr input)))))))
 
 (define (filter-lookaheads+items lookaheads+items terminal)
   (let* ((non-empties (filter (lambda (lookahead+item)
