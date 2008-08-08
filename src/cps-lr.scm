@@ -141,9 +141,17 @@
 			       (_memo (and error-status ; prevent contaxt propagation
 					   (+ error-status 1)))
 			       (input-cdr input))))
+		  ((null? accept-items)
+		   (handle-error error-status trace-closure #f input))
+		  ((null? (cdr accept-items))
+		   (reduce (car accept-items)))
 		  ((find-lookahead-item accept-items k input) => reduce)
 		  (else
 		   (handle-error error-status trace-closure #f input)))))
+	      ((null? accept-items)
+	       (handle-error error-status trace-closure #f input))
+	      ((null? (cdr accept-items))
+	       (reduce (car accept-items)))
 	      ((find-lookahead-item accept-items k input) => reduce)
 	      (else
 	       (handle-error error-status trace-closure #f input)))))))))
