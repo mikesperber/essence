@@ -1,7 +1,7 @@
-Copyright (c) 1999 Michael Sperber and Peter Thiemann.
+Copyright (c) 1999-2008 Michael Sperber and Peter Thiemann.
 See file COPYING.
 
-This is Essence 1.2!
+This is Essence 2.0!
 ====================
 
 Welcome to Essence, a Generator for LR(k) and SLR(k) parsers in
@@ -12,7 +12,7 @@ Running Essence requires Scheme 48.  The generated parsers, however,
 are written in standard R5RS Scheme.
 
 Installation instructions are in INSTALL.  More documentation is in
-doc/essence.ps or doc/html/essence.html, respectively.
+doc/essence.pdf or doc/html/essence.html, respectively.
 
 Essence is based on work in partial evaluation described in the
 following paper:
