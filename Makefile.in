@@ -31,8 +31,9 @@ TAR = tar
 ZCAT = zcat
 GZIP = gzip
 LATEX = latex
+PDFLATEX = pdflatex
 BIBTEX = bibtex
-HYPERLATEX = hyperlatex
+TEX2PAGE = tex2page
 SCHEME48 = scheme48
 
 PGG_DIRECTORY = ../pgg
@@ -94,8 +95,8 @@ PARSER_ALL_SOURCE_FILES = \
 
 PARSER_DOC_FILES = \
 	COPYING README INSTALL \
-	doc/essence.tex doc/essence.bbl doc/essence.ps \
-	doc/html/*.html doc/html/icons/*.xbm \
+	doc/essence.tex doc/essence.bbl doc/essence.pdf \
+	doc/html/*.html doc/html/*.css \
 	doc/$(RUNNABLE).man
 
 PARSER_EXAMPLE_FILES = \
@@ -288,11 +289,14 @@ doc/essence.bbl:
 doc/essence.dvi: doc/essence.tex doc/essence.bbl
 	cd doc; $(LATEX) essence; $(LATEX) essence
 
+doc/essence.pdf: doc/essence.tex doc/essence.bbl
+	cd doc; $(PDFLATEX) essence; $(PDFLATEX) essence; $(PDFLATEX) essence
+
 doc/essence.ps: doc/essence.dvi
 	cd doc; dvips essence
 
 doc/html/essence.html: doc/essence.tex
-	cd doc; $(HYPERLATEX) essence
+	cd doc; $(TEX2PAGE) essence; $(TEX2PAGE) essence; $(TEX2PAGE) essence
 
 import-genext:
 	rm -rf $(GENEXT_DIRECTORY)
@@ -307,7 +311,7 @@ distname = $(RUNNABLE)-2.$(MINOR_VERSION_NUMBER)
 dist: import-genext \
 	configure Makefile \
 	src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm \
-	doc/essence.ps doc/html/essence.html
+	doc/essence.pdf doc/html/essence.html
 	distname=$(distname) &&						\
 	distfile=$(distdir)/$$distname.tar.gz &&			\
 	if [ -d $(distdir) ] &&						\

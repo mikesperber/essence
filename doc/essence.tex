@@ -1,28 +1,20 @@
 \documentclass{article}
 
-\usepackage{hyperlatex}
-\usepackage{palatino}
-\renewcommand{\ttdefault}{cmtt}
+\usepackage{tex2page}
 \usepackage{xspace}
 \usepackage{alltt}
-\W\newenvironment{alltt}{\begin{rawhtml}<p><pre>\end{rawhtml}}{\begin{rawhtml}</pre></p>\end{rawhtml}}
 \usepackage{url}
-\W\newcommand{\url}[1]{\xlink{\texttt{#1}}{#1}}
+\usepackage{hyperref}
 
 \newcommand{\essenceversion}{2.0}
 
-\W\newcommand{\langle}{<}
-\W\newcommand{\rangle}{>}
-
-\W\newcommand{\bigskip}{\begin{rawhtml}<p>\end{rawhtml}}
-
-\newcommand{\meta}[1]{{\noindent\mbox{\textrm{$\langle$#1$\rangle$}}}}
+\newcommand{\meta}[1]{\textrm{$\langle$#1$\rangle$}}
 \newcommand{\hyper}[1]{\meta{#1}}
 \newcommand{\hyperi}[1]{\hyper{#1$_1$}}
 \newcommand{\hyperii}[1]{\hyper{#1$_2$}}
 \newcommand{\hyperj}[1]{\hyper{#1$_i$}}
 \newcommand{\hypern}[1]{\hyper{#1$_n$}}
-\renewcommand{\var}[1]{\noindent\mbox{\textit{#1}}}
+\newcommand{\var}[1]{\textit{#1}}
 \newcommand{\vari}[1]{\var{#1$_1$}}
 \newcommand{\varii}[1]{\var{#1$_2$}}
 \newcommand{\variii}[1]{\var{#1$_3$}}
@@ -30,28 +22,15 @@
 \newcommand{\varj}[1]{\var{#1$_j$}}
 \newcommand{\varn}[1]{\var{#1$_n$}}
 
-\W\newcommand{\frenchspacing}{}
-\W\newcommand{\textnormal}[1]{#1}
-
 \newcommand{\defining}[1]{{\emph{#1}}}
 \newcommand{\ide}[1]{{\frenchspacing\textnormal{\texttt{#1}}}}
 
 \newcommand{\exprtype}{syntax}
 
-\W\newcommand{\unskip}{}
-\W\newcommand{\textrm}[1]{#1}
-
-\W\newenvironment{flushleft}{}{}
-\W\newcommand{\hfill}{}
-\W\newcommand{\fill}{}
-\W\newcommand{\linebreak}{\\}
-\W\newcommand{\hspace}[1]{ }
-\W\newcommand{\hspace*}[1]{ }
-
 % Primitive prototype
-\newcommand{\pproto}[2]{\unskip%
-\mbox{\texonly{\spaceskip=0.5em}#1}%
-\mbox{ }\texonly{\nobreak}\htmlonly{ }\textrm{#2}}
+\newcommand{\pproto}[2]{\noindent%
+{\texonly\spaceskip=0.5em\endtexonly{}#1}%
+~\nobreak\textrm{#2}}
 
 % Parenthesized prototype
 \newcommand{\proto}[3]{\par\bigskip\begin{flushleft}\pproto{(\texttt{#1}}{\textit{#2})}\hspace*{\fill}{#3}\end{flushleft}}
@@ -64,25 +43,22 @@
 
 \newcommand{\constant}[1]{\texttt{#1}}
 
-\newcommand{\dotsfoo}{\ldots\texonly{\thinspace}}
+\newcommand{\dotsfoo}{\ldots\thinspace}
 
 \newcommand{\codefont}[1]{\texttt{#1}}
 
-\T\newcommand{\filename}[1]{\url{#1}}
-\W\newcommand{\filename}[1]{\texttt{#1}}
+\newcommand{\filename}[1]{\texttt{#1}}
 
-\htmltitle{Essence---An LR Parser Generator for Scheme}
-\htmldirectory{html}
-\htmladdress{\begin{rawhtml}<a href="http:/www.deinprogramm.de/sperber/">Mike
-  Sperber</a>, <a
-  href="http://www.informatik.uni-freiburg.de/~thiemann/">Peter Thiemann</a>\end{rawhtml}}
-
+\def\TZPtitle{Essence: An LR Parser Generator for Scheme (Version \essenceversion)}
 \title{Essence---An LR Parser Generator for Scheme\\
   \normalsize{Version \essenceversion}}
-\author{\xlink{Mike Sperber}{http://www.deinprogramm.de/sperber/}\\\xlink{\texttt{sperber@deinprogramm.de}}{mailto:sperber@deinprogramm.de}\\
-  \xlink{Peter
-    Thiemann}{http://www.informatik.uni-freiburg.de/~thiemann/}\\\xlink{\texttt{thiemann@informatik.uni-freiburg.de}}{mailto:thiemann@informatik.uni-freiburg.de}
+\author{\urlhd{http://www.deinprogramm.de/sperber/}{Mike Sperber}{Mike
+    Sperber}\\\urlhd{mailto:sperber@deinprogramm.de}{\texttt{sperber@deinprogramm.de}}{\texttt{sperber@deinprogramm.de}}\\
+  \urlhd{http://www.informatik.uni-freiburg.de/~thiemann/}{Peter
+    Thiemann}{Peter
+    Thiemann}\\\urlhd{mailto:thiemann@informatik.uni-freiburg.de}{\texttt{thiemann@informatik.uni-freiburg.de}}{\texttt{thiemann@informatik.uni-freiburg.de}}
   }
+\date{}
 
 \begin{document}
 
@@ -120,7 +96,7 @@ using other parser or parser generation packages.
 
 At the heart of parsing is, as usual, a context-free grammar.  Essence
 provides a new syntactic form
-\link{\codefont{define-grammar}}{form:define-grammar} which embeds a
+\codefont{define-grammar} (section~\ref{form:define-grammar}) which embeds a
 language for attributed context-free grammars into Scheme.  This is
 different from other parser generation packages which either represent 
 a context-free grammar as an S-expression object or in some special
@@ -200,7 +176,7 @@ input to the parser.  The macro \codefont{define-grammar} from the
 \codefont{essence-grammars} structure form defines both:
 
 \label{form:define-grammar}
-\proto{define-grammar}{ \meta{variable$_1$} \meta{variable$_2$}\hfill\linebreak\texonly{\hspace*{1em}}
+\proto{define-grammar}{ \meta{variable$_1$} \meta{variable$_2$}\hfill\linebreak\hspace*{1em}
     \meta{terminals}
   \meta{start-symbol} \meta{rules}}{syntax}
 
@@ -226,8 +202,8 @@ where each indivial \meta{rule} has the form
 %
 where each \meta{grammar-symbol} is either a \meta{nonterminal}, a
 \meta{terminal}, or \codefont{\$error}.  (The latter is for directing
-\link{error recovery}[ (see
-Sec.~\ref{sec:error-recovery})]{sec:error-recovery} \meta{Attribution}
+error recovery (see
+sec.~\ref{sec:error-recovery}) \meta{Attribution}
 is a Scheme expression.
 
 The set of nonterminals is defined by the \meta{nonterminals}s of the
@@ -334,8 +310,9 @@ one binding called \codefont{parse}:
   The enumerands are the \emph{ordinal numbers} of the enumerated
   values.  These are easiest obtained via the \codefont{enumerated} structure
   of Scheme~48.  In the absence of an implementation of \codefont{grammar} and
-  \codefont{enumerated}, the \link{list of components}[ in the previous
-  section]{list:grammar-enum} describes the mapping between grammar symbols and
+  \codefont{enumerated}, the list of components (see
+  section~\ref{list:grammar-enum})
+  describes the mapping between grammar symbols and
   enumerands; the enumerands are 0-based.
 \end{itemize}
 %
@@ -356,8 +333,8 @@ is \codefont{essence-list-inputs}, which defines these to the list
 procedures.
 
 If the grammar contains productions containing \codefont{\$error}
-symbols, the parser will attempt \link{error recovery}[ (see
-Sec.~\ref{sec:error-recovery})]{sec:error-recovery} when possible.
+symbols, the parser will attempt error recovery (see
+section~\ref{sec:error-recovery}) when possible.
 
 \section{Generating a Specialized Parser}
 \label{sec:parser-generation}
@@ -405,7 +382,7 @@ essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
 \begin{itemize}
 \item \texttt{Input-file} is a Scheme source file which Essence will
   load into a package with the standard R$^5$RS Scheme bindings as
-  well as \link{\codefont{define-grammar}}{form:define-grammar}.  The
+  well as \codefont{define-grammar} (section~\ref{form:define-grammar}).  The
   file must contain the definition for at least one grammar.
 \item \texttt{Grammar-name} is the name of the grammar defined in
   \texttt{input-file} for which Essence is to generate a specialized
@@ -451,7 +428,7 @@ generates specialized parsers:
 \proto{generate-parser}{grammar lookahead method goal-name}{procedure}
 %
 \var{Grammar}, \var{lookahead}, and \var{method} are as with
-\link{\codefont{parse}}{proc:parse}.
+\codefont{parse} (section~\ref{proc:parse}).
 
 The \var{goal-name} argument to \ide{generate-parser} is a symbol
 which names the entry procedure into the parser.
