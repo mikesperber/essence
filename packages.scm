@@ -41,7 +41,9 @@
 	   (src cps-lr))
     (begin
       (define (parse-error message closure error-status recovering? symbol input)
-	(if recovering?
+	(if (and recovering?
+		 (or (not error-status)
+		     (positive? error-status)))
 	    (begin
 	      (display message)
 	      (if error-status
