@@ -133,7 +133,7 @@ install-share:
 install-script:
 	script=$(bindir)/$(RUNNABLE) &&					\
 	echo '#!/bin/sh'	>$$script &&				\
-	echo 'exec $(SCHEME48) -i $(libdir)/$(BATCH_IMAGE) -h $(GENEXT_HEAPSIZE) -a $$@' \
+	echo 'exec $(SCHEME48) -i $(libdir)/$(BATCH_IMAGE) -h $(GENEXT_HEAPSIZE) -a "$$@"' \
 	     >>$$script &&						\
 	chmod +x $$script
 
@@ -141,7 +141,7 @@ $(RUNNABLE): batch
 	script=$(RUNNABLE) &&						\
 	echo '#!/bin/sh'	>$$script &&				\
 	echo "lib=`pwd`"	>>$$script &&				\
-	echo 'exec $(SCHEME48) -i $$lib/$(BATCH_IMAGE) -h $(GENEXT_HEAPSIZE) -a $$@' \
+	echo 'exec $(SCHEME48) -i $$lib/$(BATCH_IMAGE) -h $(GENEXT_HEAPSIZE) -a "$$@"' \
 	     >>$$script &&						\
 	chmod +x $$script
 
