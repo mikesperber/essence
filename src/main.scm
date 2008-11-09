@@ -4,7 +4,9 @@
     ("pretty-print" "p" "pp" pretty-print)
     ("g" "goal-proc" "goal-procedure" parameter goal-procedure)
     ("m" "method" parameter method)
-    ("l" "lookahead" parameter lookahead)))
+    ("l" "lookahead" parameter lookahead)
+    ("6" "r6rs-library" parameter r6rs-library)
+    ("i" "r6rs-import" parameter accumulates r6rs-import)))
 
 (define *usage*
   '("Usage:"
@@ -17,6 +19,8 @@
     "        ( -l lookahead | -lookahead=lookahead )"
     "        ( -s | --states)"
     "        ( -p | --pp --pretty-print)"
+    "        ( -6 library-name | --r6rs-library=library-name )"
+    "        ( -i library-name | --r6rs-import=library-name )"
     "        input-file grammar-name output-file"
     ""
     "where method must be slr or lr, and lookahead a non-negative number."
@@ -65,10 +69,17 @@
 		 (values options arguments)))))
 
 	(lambda (options arguments)
-	   
 	  (let ((input-file-name (car arguments))
 		(grammar-name (string->symbol (cadr arguments)))
 		(output-file-name (caddr arguments))
+		(r6rs-library
+		 (cond
+		  ((assq 'r6rs-library options) => cdr)
+		  (else #f)))
+		(r6rs-imports
+		 (cond
+		  ((assq 'r6rs-import options) => cdr)
+		  (else '())))
 		(goal-name
 		 (cond
 		  ((assq 'goal-procedure options) =>
@@ -104,9 +115,27 @@
 		   (parser (generate-parser grammar lookahead method goal-name)))
 	      (with-output-to-file output-file-name
 		(lambda ()
+		  (if r6rs-library
+		      (begin
+			(display "#!r6rs") (newline)
+			(display "(library ") (display r6rs-library) (newline)
+			(display "  (export ")
+			(display goal-name) (display " ") (display (grammar-enum-name grammar))
+			(display ")") (newline)
+			(display "  (import")
+			(for-each (lambda (imp)
+				    (display " ")
+				    (display imp))
+				  r6rs-imports)
+			(display ")") (newline)))
+
 		  (for-each (if (assq 'pretty-print options)
 				p
 				(lambda (form) (write form) (newline)))
-			    parser))))))))))
+			    parser)
+		  
+		  (if r6rs-imports
+		      (begin 
+			(display ")") (newline))))))))))))
   0)
 

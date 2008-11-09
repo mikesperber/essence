@@ -102,5 +102,6 @@
 	essence-options
 	essence-cps-lr-generate essence-lr-spectime
 	essence-grammar-scratch-package
+	essence-grammars
 	i/o os-strings big-util formats exceptions conditions pp)
   (files (src main)))

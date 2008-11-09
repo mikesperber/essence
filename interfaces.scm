@@ -14,6 +14,7 @@
 	  grammar-start grammar-error
 	  grammar-number-of-terminals grammar-number-of-nonterminals
 	  grammar-number-of-symbols
+	  grammar-enum-name
 	  grammar-nonterminal-offset
 	  grammar-productions-with-lhs
 	  grammar-fetch-property

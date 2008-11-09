@@ -376,6 +376,8 @@ essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
         ( -l lookahead | -lookahead=lookahead )
         ( -s | --states)
         ( -p | --pp --pretty-print)
+        ( -6 library-name | --r6rs-library=library-name )
+        ( -i library-name | --r6rs-import=library-name )
         input-file grammar-name output-file
 \end{verbatim}
 %
@@ -419,6 +421,26 @@ the grammar (including \texttt{\$error}).  The first \meta{symbol} is
 mapped to enumeration value 0, the second to 1, and so forth.  The
 \texttt{define-enumeration} form is suitable for use with Scheme~48's
 \texttt{enumerated} package.
+
+If the \texttt{-6} or \texttt{--r6rs-library} option is supplied,
+Essence will generate an R$^6$RS library~\cite{R6RS}.  The library
+will have the name supplied as an argument to the option.  In this case,
+the \texttt{-i} or \texttt{--r6rs-import} option will also need to be
+supplied for each import the generated library is to have.  Note that
+even \texttt{(rnrs base)} will need to be imported directly.   For
+example, following command-line fragment:
+
+\begin{verbatim}
+-6 '(org example parser)' -i '(rnrs base)' -i '(org s48 essence support)'
+\end{verbatim}
+%
+will create an R$^6$RS library called \texttt{(org example parser)},
+whose implementation imports \texttt{(rnrs base)} and \texttt{(org
+  example parser)}.
+
+The file \texttt{src/r6rs-support.scm} contains an example R$^6$RS
+library with parser support code suitable for import into an Essence
+parser library.
 
 \subsubsection*{REPL operation}
 The \filename{generator-packages.scm} configuration file defines a
