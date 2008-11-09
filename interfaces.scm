@@ -1,3 +1,5 @@
+; Copyright (c) 2000-2008 by Michael Sperber and Peter Thiemann. See file COPYING.
+
 ;; This depends on interfaces.scm
 
 (define-interface cogen-directives-interface

@@ -1,3 +1,5 @@
+; Copyright (c) 2000-2008 by Michael Sperber and Peter Thiemann. See file COPYING.
+
 ; Balanced parentheses
 
 (define-grammar g00 g00-symbol

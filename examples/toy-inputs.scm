@@ -1,3 +1,5 @@
+; Copyright (c) 2000-2008 by Michael Sperber and Peter Thiemann. See file COPYING.
+
 (define i08-1 (list (cons (enum g08-symbol l) #f)
 		    (cons (enum g08-symbol r) #f)
 		    (cons (enum g08-symbol l) #f)

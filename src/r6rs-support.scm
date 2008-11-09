@@ -1,5 +1,9 @@
 #!r6rs
+
+; Copyright (c) 2000-2008 by Michael Sperber and Peter Thiemann. See file COPYING.
+
 ;; Template for parser support code
+
 (library (org s48 essence support)
   (export define-enumeration
 	  parse-error

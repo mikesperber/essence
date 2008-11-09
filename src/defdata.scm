@@ -1,3 +1,5 @@
+; Copyright (c) 2000-2008 by Michael Sperber and Peter Thiemann. See file COPYING.
+
 ; This is simpler than the cogen definition and hides more.
 ; Therefore, it probably should only be used at runtime.
 

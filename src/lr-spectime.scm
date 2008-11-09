@@ -1,3 +1,5 @@
+; Copyright (c) 2000-2008 by Michael Sperber and Peter Thiemann. See file COPYING.
+
 ; LR support code needed at generation time
 
 (define (production<? p1 p2)
