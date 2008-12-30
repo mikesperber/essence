@@ -1,17 +1,20 @@
 .de FN
 \fI\|\\$1\|\fP
 ..
-.TH essence 1 "1999 Feb 25" Essence
+.TH essence 1 "2008 Dec 30" Essence
 .SH NAME
 Essence \- an LR Parser Generator for Scheme
 .SH SYNOPSIS
 .B Essence
 essence ( --help | -h )
 
-essence ( -g goal-proc | --goal-proc=goal-proc
-        | --goal-procedure=goal-proc )
+essence ( -g goal-proc | --goal-proc=goal-proc | --goal-procedure=goal-proc )
         ( -m method | --method=method )
         ( -l lookahead | -lookahead=lookahead )
+        ( -s | --states)
+        ( -p | --pp --pretty-print)
+        ( -6 library-name | --r6rs-library=library-name )
+        ( -i library-name | --r6rs-import=library-name )
         input-file grammar-name output-file
 .SH DESCRIPTION
 .I Essence
@@ -31,7 +34,7 @@ with the parser generated from the grammar named
 For more information, see the documentation in the
 .I Essence
 distribution under
-.IR doc/essence.ps
+.IR doc/essence.pdf
 or
 .IR doc/html/essence.html
 .
@@ -56,12 +59,25 @@ The default is
 .PP
 .IP "-l \fIlookahead\fP --lookahead=\fIlookahead\fP"
 Specify the lookahead size.  The default is 1.
-
+.PP
+.IP "-s --states"
+Print out the LR states of the generated parser.
+.PP
+.IP "-p --pp --pretty-print"
+Pretty-print the generated code.
+.PP
+.IP "-6 \fIlibrary-name\fP --r6rs-library=\fIlibrary-name\fP"
+Specifies that an R6RS library of the specified name, instead of plain
+R5RS code should be generated.
+.PP
+.IP "-i \fIlibrary-name\fP --r6rs-import=\fIlibrary-name\fP"
+Specifies an import of the generated R6RS library.  May be used
+multiple times to specify multiple imports.
 .SH "SEE ALSO"
 .IR bison(1)
 .IR yacc(1)
 
 .SH AUTHORS
 .PP
-Mike Sperber <sperber@informatik.uni-tuebingen.de> and Peter Thiemann
+Mike Sperber <sperber@deinprogramm.de> and Peter Thiemann
 <thiemann@informatik.uni-freiburg.de> are the authors of Essence.

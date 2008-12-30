@@ -9,7 +9,7 @@ Scheme.  Essence generates highly efficient parsers capable of
 performing error recovery.
 
 Running Essence requires Scheme 48.  The generated parsers, however,
-are written in standard R5RS Scheme.
+are written in standard R5RS or R6RS Scheme.
 
 Installation instructions are in INSTALL.  More documentation is in
 doc/essence.pdf or doc/html/essence.html, respectively.
