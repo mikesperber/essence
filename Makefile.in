@@ -40,7 +40,7 @@ PGG_DIRECTORY = ../pgg
 PGG_PACKAGES = $(PGG_DIRECTORY)/genext-packages.scm \
 	$(PGG_DIRECTORY)/pgg-packages.scm
 GENEXT_BASE = genext
-GENEXT_VERSION = 1.3
+GENEXT_VERSION = 1.4
 GENEXT_DIRECTORY = genext
 GENEXT_PACKAGES = $(GENEXT_DIRECTORY)/genext-packages.scm
 PGG_HEAPSIZE = 8000000
@@ -147,15 +147,10 @@ $(RUNNABLE): batch
 
 install-documentation: documentation
 	$(INSTALL_DATA) doc/$(RUNNABLE).man $(mandir)/$(RUNNABLE).$(manext)
-	$(INSTALL_DATA) doc/essence.ps $(docdir)
+	$(INSTALL_DATA) doc/essence.pdf $(docdir)
 	cd doc/html; 							\
-	for f in *.html; do						\
+	for f in *.html *.css; do						\
 		$(INSTALL_DATA) $$f $(htmldir);				\
-	done
-	mkdir -p $(htmldir)/icons &&					\
-	cd doc/html/icons;						\
-	for f in *.xbm; do						\
-		$(INSTALL_DATA) $$f $(htmldir)/icons;			\
 	done
 
 install-directories:
@@ -218,7 +213,7 @@ install-batch:
 
 image: $(IMAGE)
 
-$(IMAGE): import-genext \
+$(IMAGE): $(GENEXT_DIRECTORY) \
 	src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm \
 	$(PARSER_GENEXT_CONFIG_FILES)
 	(echo ',batch on';						\
@@ -235,7 +230,7 @@ $(IMAGE): import-genext \
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(GENEXT_HEAPSIZE)
 
-install-image: genext \
+install-image: $(GENEXT_DIRECTORY) \
 	$(PARSER_GENEXT_CONFIG_FILES)
 	rm -f $(TEMPDIR)/$(IMAGE) &&					\
 	(echo ',batch on';						\
@@ -281,7 +276,7 @@ src/essence-cps-lr-genext.scm src/essence-cps-lr-genext.config.scm: \
 	 echo ',exit'							\
 	) | $(SCHEME48) -h $(PGG_HEAPSIZE)
 
-documentation: doc/essence.ps doc/html/essence.html
+documentation: doc/essence.pdf doc/html/essence.html
 
 doc/essence.bbl:
 	cd doc; $(LATEX) essence; $(BIBTEX) essence
