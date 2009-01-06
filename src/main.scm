@@ -136,7 +136,7 @@
 				(lambda (form) (write form) (newline)))
 			    parser)
 		  
-		  (if r6rs-imports
+		  (if r6rs-library
 		      (begin 
 			(display ")") (newline))))))))))))
   0)
