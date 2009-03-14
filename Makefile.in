@@ -107,6 +107,7 @@ PARSER_DIST_FILES = \
 	$(PARSER_ALL_SOURCE_FILES) \
 	configure configure.in install-sh \
 	Makefile.in \
+	load-essence.scm \
 	$(PARSER_DOC_FILES) \
 	$(PARSER_EXAMPLE_FILES) \
 	$(PARSER_GENEXT_SUPPORT_SOURCE_FILES)
